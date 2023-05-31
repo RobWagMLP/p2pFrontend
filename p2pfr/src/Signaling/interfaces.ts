@@ -2,9 +2,11 @@ export interface SocketMessage {
     type: string;
 }
 
+export interface RequestRoom extends SocketMessage {
+    room_id: number;
+}
 export interface Offer extends SocketMessage {
     offer: RTCSessionDescription;
-    room_id: number;
 }
 
 export interface Answer extends SocketMessage {

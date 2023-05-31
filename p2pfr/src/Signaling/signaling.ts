@@ -1,18 +1,24 @@
-import {Offer, Answer, RecIceCandidate} from './interfaces.ts'
+import {Offer, Answer, RecIceCandidate, RequestRoom} from './interfaces.ts'
 
 export class Signaling {
 
     onRecIceCand  : (candidate: RTCIceCandidate   , person_id: number) => void;
+    onRoomInfo    : (userList:  Array<number>                        ) => void;
     onOffer       : (offer : RTCSessionDescription, person_id: number) => void;
     onAnswer      : (answer: RTCSessionDescription, person_id: number) => void;    
     onOrder       : (order : string                                  ) => void;      
     onStatus      : (status: string                                  ) => void;
     onOpen        : (                                                ) => void;
     onClose       : (reason:string                                   ) => void;
+    onError       : (error:string                                    ) => void;
     
     private ws: WebSocket;
 
-    constructor(person_id?: number) {
+    constructor() {
+
+    }
+    
+    connect(person_id?: number) {
         const addString = person_id == null && process.env.ENV === 'local' ? `` : `?person_id=${person_id}`;
 
         const host = process.env.WEBSOCKET_HOST + addString; //only for dev, in prod this comes from aws tocken.
@@ -55,6 +61,14 @@ export class Signaling {
                     this.onOrder(dataobj.order);
                 }
                 break;
+                case "error": {
+                    this.onError(dataobj.error);
+                }
+                break;
+                case "room_info": {
+                    this.onRoomInfo(dataobj.userlist);
+                }
+                break;
                 default: {
                     console.log(`unknown type: ${dataobj.type}`);
                 }
@@ -82,12 +96,24 @@ export class Signaling {
         this.onOpen = method;
     }
 
+    addOnErrorListener(method: (error: string) => void) {
+        this.onError = method;
+    }
+
     addOnCloseListener(method: (reason:string) => void) {
         this.onClose = method;
     }
 
     addOrderListener(method: (order: string   ) => void) {
         this.onOrder = method;
+    }
+
+    addOnRoomInfoListener(method: (userList: Array<number>   ) => void) {
+        this.onRoomInfo = method;
+    }
+
+    sendRoomRequest(roomRequest: RequestRoom) {
+        this.ws.send(JSON.stringify(roomRequest));
     }
 
     sendOffer(offer: Offer) {

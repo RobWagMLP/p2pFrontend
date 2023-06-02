@@ -4,6 +4,16 @@ export class Storage {
     
     private username: string;
     private room_id:  number;
+    private media: {
+        cam: boolean,
+        audio: boolean
+    };
+    private settings: {};
+
+    private mediaDeviceAndStream: {
+        devices: Array<MediaDeviceInfo>;
+        stream:  MediaStream
+    }
 
     private constructor() {
 
@@ -30,5 +40,29 @@ export class Storage {
 
     getUserName(): string {
         return this.username;
+    }
+
+    setCamAndAudio(vals: {cam: boolean, audio: boolean}) {
+        this.media = vals;
+    }
+
+    getCamAndAudio(): {cam: boolean, audio: boolean} {
+        return this.media;
+    }
+
+    setSettings(settings: {}) {
+        this.settings = settings;
+    }
+
+    getSettings() : {} {
+        return this.settings;
+    }
+
+    setMediaDeviceAndStream(data: { devices: any; stream:  MediaStream}) {
+        this.mediaDeviceAndStream = data;
+    }
+
+    getMediaDeviceAndStream(): { devices: any; stream:  MediaStream} {
+        return this.mediaDeviceAndStream;
     }
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { KeyText, KeyValueWrapper, StyledInput } from "../Style/baseStyle.css.ts";
+import { KeyText, KeyValueWrapper, StyledInput } from "../Style/baseStyle.css";
 
 interface IProps {
     label: string;
@@ -18,10 +18,10 @@ export class Input extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
-            text: props.text ?? ""
+            text: props.text == null ? "" : props.text
         }   
     }
-    
+
     render(){
         return(
             <KeyValueWrapper>

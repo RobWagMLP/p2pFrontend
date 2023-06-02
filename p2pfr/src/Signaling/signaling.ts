@@ -2,15 +2,16 @@ import {Offer, Answer, RecIceCandidate, RequestRoom} from './interfaces.ts'
 
 export class Signaling {
 
-    onRecIceCand  : (candidate: RTCIceCandidate   , person_id: number) => void;
-    onRoomInfo    : (userList:  Array<number>                        ) => void;
-    onOffer       : (offer : RTCSessionDescription, person_id: number) => void;
-    onAnswer      : (answer: RTCSessionDescription, person_id: number) => void;    
-    onOrder       : (order : string                                  ) => void;      
-    onStatus      : (status: string                                  ) => void;
-    onOpen        : (                                                ) => void;
-    onClose       : (reason:string                                   ) => void;
-    onError       : (error:string                                    ) => void;
+    onRecIceCand    : (candidate: RTCIceCandidate   , person_id: number) => void;
+    onRoomInfo      : (userList:  Array<number>                        ) => void;
+    onOffer         : (offer : RTCSessionDescriptionInit, person_id: number) => void;
+    onAnswer        : (answer: RTCSessionDescriptionInit, person_id: number) => void;    
+    onOrder         : (order : string                                  ) => void;      
+    onStatus        : (status: string                                  ) => void;
+    onOpen          : (                                                ) => void;
+    onClose         : (reason:string                                   ) => void;
+    onError         : (error:string                                    ) => void;
+    onWebSocketError : (ev: Event                                       ) => void;
     
     private ws: WebSocket;
 
@@ -19,11 +20,16 @@ export class Signaling {
     }
     
     connect(person_id?: number) {
-        const addString = person_id == null && process.env.ENV === 'local' ? `` : `?person_id=${person_id}`;
+        const addString = person_id == null && process.env.ENV === 'prod' ? `` : `?person_id=${person_id}`;
 
         const host = process.env.WEBSOCKET_HOST + addString; //only for dev, in prod this comes from aws tocken.
 
         this.ws = new WebSocket(host);
+    
+        //@ts-ignore
+        this.ws.onerror((ev: Event) => {
+            this.onWebSocketError(ev);
+        })
 
         //@ts-ignore
         this.ws.onopen((_ev: Event) => {
@@ -80,11 +86,11 @@ export class Signaling {
         this.onRecIceCand = method;
     }
 
-    addOfferListener(method: (offer : RTCSessionDescription, person_id: number) => void) {
+    addOfferListener(method: (offer : RTCSessionDescriptionInit, person_id: number) => void) {
         this.onOffer = method;
     }
 
-    addAnswerListener(method: (answer : RTCSessionDescription, person_id: number) => void) {
+    addAnswerListener(method: (answer : RTCSessionDescriptionInit, person_id: number) => void) {
         this.onAnswer = method;
     }
 
@@ -111,6 +117,11 @@ export class Signaling {
     addOnRoomInfoListener(method: (userList: Array<number>   ) => void) {
         this.onRoomInfo = method;
     }
+
+    addonWebSocketErrorListener(method: (ev: Event   ) => void) {
+        this.onWebSocketError = method;
+    }
+
 
     sendRoomRequest(roomRequest: RequestRoom) {
         this.ws.send(JSON.stringify(roomRequest));

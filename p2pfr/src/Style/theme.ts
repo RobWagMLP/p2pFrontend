@@ -1,9 +1,12 @@
 export const theme = {
     font: {
         heading_color: '#088edd',
-        heading_font_weight: 300,
-        heading_font_size: 42,
-        base_color: '#333'      
+        heading_font_weight: 500,
+        heading_font_size: '44px',
+        heading_small_size: '32px',
+        font_family: 'Helvetica Neue,sans-serif',
+        base_color: '#333',
+        error_color: '#ff726f'     
     },
     grid: {
         display: 'grid'

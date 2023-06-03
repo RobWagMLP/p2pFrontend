@@ -26,9 +26,11 @@ export class P2PHandler {
 
     private onOrder: (order: string) => void;
 
-    private lastStatus: string;
+    private onNewConnection: (con: RTCPeerConnection, person_id: number) => void;
 
-    private lastError: string;
+    private statusHistory: Array<string>;
+
+    private errorHistory: Array<string>;
 
     private canReqestRoom: boolean;
 
@@ -82,6 +84,10 @@ export class P2PHandler {
 
     setOnOrdercallback(method: (order: string) => void) {
         this.onOrder = method;
+    }
+
+    setOnNewConnectioncallback(method: (con: RTCPeerConnection, person_id: number) => void) {
+        this.onNewConnection = method;
     }
     
     private setupConnection(person_id: number) : RTCPeerConnection{
@@ -144,6 +150,7 @@ export class P2PHandler {
 
             this.signaling.addOnErrorListener((error: string) => {
                 console.log(error);
+                this.errorHistory.push(error);
 
                 switch(error) {
                     case "no_access_to_room": {
@@ -169,14 +176,8 @@ export class P2PHandler {
                 switch(status) {
                     default: this.notify(status);
                 }
-                this.lastStatus = status;
+                this.statusHistory.push(status);
             });
-
-            this.signaling.addOnErrorListener((error: string) => {
-                console.log(error);
-                this.lastError = error;
-                this.errorCallback(error);
-            })
 
             this.signaling.addOnRoomInfoListener((userList: number[]) => {
                 this.roomReadyCallback(true);
@@ -186,6 +187,8 @@ export class P2PHandler {
                 for(const o of userList) {
                     const connection = this.setupConnection(o);
                     this.connections.set(o, connection);
+
+                    this.onNewConnection(connection, o);
                 }
             });
             
@@ -234,6 +237,8 @@ export class P2PHandler {
 
                 //const answer = await connection.createAnswer();
                 await connection.setLocalDescription();
+                
+                this.onNewConnection(connection, person_id);
 
                 this.signaling.sendAnswer({type: "accept_offer_from_peer", answer: connection.localDescription});
             });

@@ -42,5 +42,51 @@ export const settings = () => {
     )
 }
 
+export const shareScreen = () => {
+    return (
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="ConnectedTvIcon">
+            <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12zM4 14v2h2c0-1.11-.89-2-2-2zm0-3v1.43c1.97 0 3.57 1.6 3.57 3.57H9c0-2.76-2.24-5-5-5zm0-3v1.45c3.61 0 6.55 2.93 6.55 6.55H12c0-4.42-3.59-8-8-8z">
+            </path>
+        </svg>
+    )
+}
+
+export const shareFile = () => {
+    return(
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="UploadFileIcon">
+            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15.01l1.41 1.41L11 14.84V19h2v-4.16l1.59 1.59L16 15.01 12.01 11z">
+            </path>
+        </svg>
+    )
+}
+
+export const uploadFile = () => {
+    return(
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="UploadFileIcon">
+            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15.01l1.41 1.41L11 14.84V19h2v-4.16l1.59 1.59L16 15.01 12.01 11z">
+            </path>
+        </svg>
+    )
+}
+
+export const chat = () => {
+    return(
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="ChatBubbleOutlineIcon">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z">
+            </path>
+        </svg>
+    )
+}
+
+export const stop = () => {
+    return(
+        <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="DangerousIcon">
+            <path d="M15.73 3H8.27L3 8.27v7.46L8.27 21h7.46L21 15.73V8.27L15.73 3zM17 15.74 15.74 17 12 13.26 8.26 17 7 15.74 10.74 12 7 8.26 8.26 7 12 10.74 15.74 7 17 8.26 13.26 12 17 15.74z">
+            </path>
+        </svg>
+    )
+}
+
+
 
 

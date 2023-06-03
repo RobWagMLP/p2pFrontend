@@ -1,7 +1,8 @@
-import React, { ReactElement } from "react";
-import { BottomArea, OffsetVideoArea, RightMenuArea, VideoArea, VideoElement, VideoHeader, VideoMainGrid } from "../Style/baseStyle.css";
+import React, { ReactElement, SyntheticEvent } from "react";
+import { BottomArea, HoverBox, OffsetVideoArea, RightMenuArea, SmallVideo, VideoArea, VideoElement, VideoHeader, VideoMainGrid } from "../Style/baseStyle.css";
 import { P2PHandler } from "../Signaling/p2pHandler";
 import { Storage } from "../Helper/storage";
+import { audioOn, audioOff, cameraOn, cameraOff, settings, shareScreen, uploadFile, chat, stop } from "../Helper/icons";
 
 interface IProps {
     room_id: number;
@@ -15,6 +16,9 @@ interface IState {
                       stream:  MediaStream          };
     username: string;
     error?: string;
+    screenshared: boolean;
+    mainVideoArea: Array<number>;
+    offsetVideoArea: Array<number>;
 }
 
 const gridmax = {row: 2, column: 2};
@@ -33,7 +37,10 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             mediaEnabled: mediaEnabled,
             deviceAndStream: deviceAndStream,
             connections: this.p2pHandler.connections,
-            streams: new Map<number, MediaStream>()
+            streams: new Map<number, MediaStream>(),
+            screenshared: false,
+            mainVideoArea: [],
+            offsetVideoArea: []
         }
     }
 
@@ -45,7 +52,11 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 error: error
             })
         })
-        this.initP2P();
+
+        const videoSelf = document.getElementById('video_stream_self') as HTMLVideoElement;
+        videoSelf.srcObject = this.state.deviceAndStream.stream;
+
+        //this.initP2P();
     }
 
     initP2P() {
@@ -82,17 +93,49 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         })
 
         this.p2pHandler.setConnectionStatecallback((person_id: number, state: string) => {
-            if(state === "connected") {
-                console.log(`connected to ${person_id}. Sending Stream`);
+            console.log(`state ${state} with ${person_id}.`);      
 
-                const connections = this.state.connections;
-                const connection = connections.get(person_id);
-                for(const track of this.state.deviceAndStream.stream.getTracks()) {
-                    connection.addTrack(track, this.state.deviceAndStream.stream);
+            if(state === "closed") {
+                let newArr: Array<number>;
+
+                let isMain: boolean = false;
+                let isOffset: boolean = false;
+
+                if(this.state.mainVideoArea.indexOf(person_id ) >= 0) {
+                    const arr = this.state.mainVideoArea;
+                    newArr = arr.splice(arr.indexOf(person_id), 1);
+                    isMain = true;
+
+                } else if (this.state.offsetVideoArea.indexOf(person_id ) >= 0) {
+                    const arr = this.state.offsetVideoArea;
+                    newArr = arr.splice(arr.indexOf(person_id), 1);
+                    isMain = false;
                 }
+                const streams = this.state.streams;
+                
+                streams.delete(person_id);
+                this.setState({
+                    streams: streams,
+                    mainVideoArea: isMain? newArr : this.state.mainVideoArea,
+                    offsetVideoArea: isOffset ? newArr : this.state.offsetVideoArea
+                })
             }
-
         })
+
+        this.p2pHandler.setOnNewConnectioncallback((con: RTCPeerConnection, person_id) => {
+                for(const track of this.state.deviceAndStream.stream.getTracks()) {
+                    con.addTrack(track, this.state.deviceAndStream.stream);
+                }
+                const pushToMain = this.state.mainVideoArea.length < 4 ;
+                const arr = pushToMain ? this.state.mainVideoArea : this.state.offsetVideoArea;
+
+                arr.push(person_id);
+
+                this.setState({
+                    mainVideoArea: pushToMain ? arr : this.state.mainVideoArea,
+                    offsetVideoArea: pushToMain ? this.state.offsetVideoArea : arr
+                })
+        });
 
         this.p2pHandler.setOnOrdercallback((order: string) => {
             if(order === "disconnect") {
@@ -133,17 +176,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         try {
             this.p2pHandler.initRoom(this.props.room_id, (suc: boolean, message: string) => {
                 if(suc) {
-                    try{
-                        this.p2pHandler.sendOffer();
-                        this.setState({
-                            connections: this.p2pHandler.connections
-                        })
-                    } catch(error: any) {
-                        console.log(error);
-                        this.setState({
-                            error: error.cause
-                        })
-                    }
+                    console.log("room sucessfully initialized")
                 } else {
                     console.log(message);
                     this.setState({
@@ -168,10 +201,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         let i = 1, j = 1;
         let count = 0;
 
-        for(const person_id in this.state.connections) {
-            if(count >= gridmax.row*gridmax.column) {
-                break;
-            }
+        for(const person_id in this.state.mainVideoArea) {
             out.push(
                 <VideoElement
                     colspan={colspan}
@@ -192,6 +222,24 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         return out;
     }
 
+    setupOffsetArea() : Array<ReactElement> { 
+        const out = [];
+        out.push(
+            <SmallVideo 
+                id="video_stream_self"
+            />
+        );
+        for(const person_id in this.state.offsetVideoArea) {
+            out.push(
+                <SmallVideo 
+                    id={`video_stream_${person_id}`}
+                />
+            );
+        }
+        return out;
+    }
+        
+
     render(){
         return(
             <VideoMainGrid>
@@ -204,15 +252,52 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 </VideoArea>
 
                 <OffsetVideoArea>
-                    C   
+                    {this.setupOffsetArea()}   
                 </OffsetVideoArea>
-                
+
                 <RightMenuArea>
                     D
                 </RightMenuArea>
 
                 <BottomArea>
-                    E
+                    <HoverBox>
+
+                    </HoverBox>
+                    <HoverBox onClick={() => {
+                        this.onMuteAudio(!this.state.mediaEnabled.audio)
+                        }}>
+                        {this.state.mediaEnabled.audio ? audioOn() : audioOff()}
+                        </HoverBox>
+                    <HoverBox onClick={() => {
+                        this.onMuteVideo(!this.state.mediaEnabled.cam)
+                        }}>
+                        {this.state.mediaEnabled.cam ? cameraOn() : cameraOff()}
+                    </HoverBox>
+                    <HoverBox onClick={(event: SyntheticEvent) => {
+                        event.stopPropagation();
+                        }}>
+                        {settings()}
+                    </HoverBox>
+                    <HoverBox onClick={(event: SyntheticEvent) => {
+                        event.stopPropagation();
+                        }}>
+                        {shareScreen()}
+                    </HoverBox>
+                    <HoverBox onClick={(event: SyntheticEvent) => {
+                        event.stopPropagation();
+                        }}>
+                        {uploadFile()}
+                    </HoverBox>
+                    <HoverBox onClick={(event: SyntheticEvent) => {
+                        event.stopPropagation();
+                        }}>
+                        {chat()}
+                    </HoverBox>
+                    <HoverBox onClick={(event: SyntheticEvent) => {
+                        event.stopPropagation();
+                        }}>
+                        {stop()}
+                    </HoverBox>
                 </BottomArea>
             </VideoMainGrid>
 

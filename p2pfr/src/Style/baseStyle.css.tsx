@@ -164,10 +164,15 @@ export const VideoHeader = styled.div`
 `;
 
 export const BottomArea = styled(VideoHeader)`
+    grid-column-start: 1;
+    grid-column-end: 3;
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
+    margin: 32px;
+    border-radius: 4px;
+    border: 4px solid ${theme.font.heading_color};
 `;
 
 export const VideoArea = styled.div`
@@ -178,7 +183,8 @@ export const VideoArea = styled.div`
 
 export const OffsetVideoArea = styled.div`
     display: flex;
-    justify-content: column;
+    justify-content: center;
+    flex-direction: column;
     padding: 8px;
 `;
 
@@ -186,15 +192,17 @@ export const OffsetVideoArea = styled.div`
 export const RightMenuArea = styled.div`
 `;
 
-export const VideoElement = styled.div<{row: number, column: number, rowspan: number, colspan: number}>`
+export const VideoElement = styled.video<{row: number, column: number, rowspan: number, colspan: number}>`
     grid-column-start: ${props => props.column};
     grid-column-end:   ${props => props.column + props.colspan};
     grid-row-start: ${props => props.row};
     grid-row-end:   ${props => props.row + props.rowspan};
-
-`;
-
-export const Video = styled.video`
     border: 2px solid white;
     border-radius: 4px;
+    margin: 16px;
 `;
+
+export const SmallVideo = styled.video`
+    margin: 16px;
+    width: 95%;
+ `;

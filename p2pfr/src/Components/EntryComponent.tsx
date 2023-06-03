@@ -24,6 +24,7 @@ interface IState {
     showDeviceMenu?: boolean;
     devicePos?: {x: string; y: string; height: string};
     error?: string;
+    canStart: boolean;
 }
 
 export class EntryComponent extends React.Component<IProps, IState> {
@@ -42,7 +43,8 @@ export class EntryComponent extends React.Component<IProps, IState> {
                 name: "",
                 settings: {},
                 devices: [],
-                socketAvailable: false
+                socketAvailable: false,
+                canStart: false
             }
         }
 

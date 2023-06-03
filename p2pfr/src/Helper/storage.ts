@@ -3,6 +3,7 @@ export class Storage {
     private static instance: Storage;
     
     private username: string;
+    private person_id: number;
     private room_id:  number;
     private media: {
         cam: boolean,
@@ -32,6 +33,14 @@ export class Storage {
 
     getRoomID(): number {
         return this.room_id;
+    }
+
+    setPersonID(person_id: number) {
+        this.person_id = person_id;
+    }
+
+    getPersonID(): number {
+        return this.person_id;
     }
 
     setUsername(name: string) {

@@ -42,7 +42,7 @@ export class EntryComponent extends React.Component<IProps, IState> {
                 name: "",
                 settings: {},
                 devices: [],
-                socketAvailable: true
+                socketAvailable: false
             }
         }
 
@@ -60,7 +60,7 @@ export class EntryComponent extends React.Component<IProps, IState> {
             this.p2pHandler.setWebsocketConnectionIssueCallback((ev: Event) =>{
                 console.log(ev);
                 this.setState({
-                    error: "Error connecing to Websocket",
+                    error: "Error connecting to Websocket",
                     socketAvailable: false
                 })
             })

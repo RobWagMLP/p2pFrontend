@@ -1,4 +1,4 @@
-import {Offer, Answer, RecIceCandidate, RequestRoom} from './interfaces.ts'
+import {Offer, Answer, RecIceCandidate, RequestRoom, SingleOffer} from './interfaces.ts'
 
 export class Signaling {
 
@@ -26,60 +26,60 @@ export class Signaling {
 
         this.ws = new WebSocket(host);
     
-        //@ts-ignore
-        this.ws.onerror((ev: Event) => {
+        this.ws.onerror = (ev: Event) => {
             this.onWebSocketError(ev);
-        })
+        };
 
-        //@ts-ignore
-        this.ws.onopen((_ev: Event) => {
+        this.ws.onopen = (_ev: Event) => {
             this.onOpen();
-        })
+        };
 
-        //@ts-ignore
-        this.ws.onclose((ev: CloseEvent) => {
+        this.ws.onclose = (ev: CloseEvent) => {
             this.onClose(ev.reason);
-        })
+        };
 
-        //@ts-ignore
-        this.ws.onmessage((ev: MessageEvent<string>) => {
+        this.ws.onmessage = (ev: MessageEvent<string>) => {
             const data = ev.data;
-            const dataobj = JSON.parse(data);
+            try{
+                const dataobj = JSON.parse(data);
 
-            switch(dataobj.type) {
-                case "status": {
-                    this.onStatus(dataobj.status)
+                switch(dataobj.type) {
+                    case "status": {
+                        this.onStatus(dataobj.status)
+                    }
+                    break;
+                    case "offer": {
+                        this.onOffer(dataobj.offer, dataobj.person_id);
+                    }
+                    break;
+                    case "answer": {
+                        this.onAnswer(dataobj.answer, dataobj.person_id);
+                    }
+                    break;
+                    case "ice_candidate": {
+                        this.onRecIceCand(dataobj.candidate, dataobj.person_id);
+                    }
+                    break;
+                    case "order": {
+                        this.onOrder(dataobj.order);
+                    }
+                    break;
+                    case "error": {
+                        this.onError(dataobj.error);
+                    }
+                    break;
+                    case "room_info": {
+                        this.onRoomInfo(dataobj.userlist);
+                    }
+                    break;
+                    default: {
+                        console.log(`unknown type: ${dataobj.type}`);
+                    }
                 }
-                break;
-                case "offer": {
-                    this.onOffer(dataobj.offer, dataobj.person_id);
-                }
-                break;
-                case "answer": {
-                    this.onAnswer(dataobj.answer, dataobj.person_id);
-                }
-                break;
-                case "ice_candidate": {
-                    this.onRecIceCand(dataobj.candidate, dataobj.person_id);
-                }
-                break;
-                case "order": {
-                    this.onOrder(dataobj.order);
-                }
-                break;
-                case "error": {
-                    this.onError(dataobj.error);
-                }
-                break;
-                case "room_info": {
-                    this.onRoomInfo(dataobj.userlist);
-                }
-                break;
-                default: {
-                    console.log(`unknown type: ${dataobj.type}`);
-                }
+            } catch(err: any) {
+                console.log('invalid message ', err, data);
             }
-        })
+        };
     }
 
     addIceCandidateListener(method: (candidate: RTCIceCandidate , person_id: number  ) => void) {
@@ -128,6 +128,10 @@ export class Signaling {
     }
 
     sendOffer(offer: Offer) {
+        this.ws.send(JSON.stringify(offer));
+    }   
+
+    sendSingleOffer(offer: SingleOffer) {
         this.ws.send(JSON.stringify(offer));
     }   
 

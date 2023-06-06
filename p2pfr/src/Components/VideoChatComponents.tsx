@@ -1,16 +1,23 @@
 import React, { ReactElement, SyntheticEvent } from "react";
-import { BottomArea, HoverBox, OffsetVideoArea, RightMenuArea, SmallVideo, VideoArea, VideoElement, VideoHeader, VideoMainGrid } from "../Style/baseStyle.css";
+import { BottomArea, HoverBox, MenuItemWrapper, OffsetVideoArea, RightMenuArea, SmallVideo, VideoArea, VideoElement, VideoHeader, VideoMainGrid } from "../Style/baseStyle.css";
 import { P2PHandler } from "../Signaling/p2pHandler";
 import { Storage } from "../Helper/storage";
 import { audioOn, audioOff, cameraOn, cameraOff, settings, shareScreen, uploadFile, chat, stop } from "../Helper/icons";
 
+interface PeerData {
+    name?: string;
+    stream?: MediaStream;
+    audio?: boolean;
+    video?: boolean
+}
+
 interface IProps {
-    room_id: number;
+
 }
 
 interface IState {
     connections: Map<number, RTCPeerConnection>;
-    streams:      Map<number, MediaStream>;
+    streams:      Map<number, PeerData>;
     mediaEnabled: {cam: boolean, audio: boolean};
     deviceAndStream: {devices: Array<MediaDeviceInfo>;
                       stream:  MediaStream          };
@@ -24,8 +31,9 @@ interface IState {
 const gridmax = {row: 2, column: 2};
 
 export class VideoChatComponent extends React.Component<IProps, IState> {
-    private p2pHandler = P2PHandler.getInstance();
-    
+    private p2pHandler = Storage.getInstance().getP2pHandler();
+    private maxMainView = 4;
+
     constructor(props: IProps) {
         super(props);
         const mediaEnabled      = Storage.getInstance().getCamAndAudio();
@@ -37,7 +45,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             mediaEnabled: mediaEnabled,
             deviceAndStream: deviceAndStream,
             connections: this.p2pHandler.connections,
-            streams: new Map<number, MediaStream>(),
+            streams: new Map<number, PeerData>(),
             screenshared: false,
             mainVideoArea: [],
             offsetVideoArea: []
@@ -56,7 +64,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const videoSelf = document.getElementById('video_stream_self') as HTMLVideoElement;
         videoSelf.srcObject = this.state.deviceAndStream.stream;
 
-        //this.initP2P();
+        this.initP2P();
     }
 
     initP2P() {
@@ -78,17 +86,52 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
         this.p2pHandler.setOnTrackcallback((person_id: number, ev: RTCTrackEvent) => {
             const streams = this.state.streams;
-     
-            const stream: MediaStream = ev.streams[0];
-            streams.set(person_id, stream);
+            const trackType = ev.track.kind;
+            console.log(`TRACK received from ${person_id}`)
+
+            ev.track.addEventListener("mute", (ev: Event) => {
+                if(trackType === 'audio') {
+                    this.onMutePeerAudio(false, person_id);
+                } else {
+                    this.onMutePeerVideo(false, person_id)
+                }
+            })
+
+            ev.track.addEventListener("unmute", (ev: Event) => {
+                if(trackType === 'audio') {
+                    this.onMutePeerAudio(true, person_id);
+                } else {
+                    this.onMutePeerVideo(true, person_id)
+                }
+            })
+         
+            const data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
+            data.stream = ev.streams[0];
+
+            if(trackType === 'audio') {
+                data.audio = ev.track.enabled;
+            } else if(trackType === 'video') {
+                data.video = ev.track.enabled
+            }
+            streams.set(person_id, data);
 
             const video: HTMLVideoElement = document.getElementById(`video_stream_${person_id}`) as HTMLVideoElement;
             if(video) {
-                video.srcObject = stream;
+                video.srcObject = data.stream;
             }
 
+            const intoMain = this.state.mainVideoArea.length >= this.maxMainView ;
+            const arr = intoMain ? this.state.offsetVideoArea : this.state.mainVideoArea;
+            if(arr.indexOf(person_id) < 0 ) {
+                arr.push(person_id);
+            }
+
+            console.log(this.state.mainVideoArea);
+
             this.setState({
-                streams: streams
+                streams: streams,
+                mainVideoArea: intoMain ? arr : this.state.mainVideoArea,
+                offsetVideoArea: intoMain? this.state.offsetVideoArea : arr
             })
         })
 
@@ -104,6 +147,10 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 if(this.state.mainVideoArea.indexOf(person_id ) >= 0) {
                     const arr = this.state.mainVideoArea;
                     newArr = arr.splice(arr.indexOf(person_id), 1);
+
+                    if(this.state.offsetVideoArea.length > 0 ) {
+                        newArr.push(this.state.offsetVideoArea.pop());
+                    }
                     isMain = true;
 
                 } else if (this.state.offsetVideoArea.indexOf(person_id ) >= 0) {
@@ -112,7 +159,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     isMain = false;
                 }
                 const streams = this.state.streams;
-                
+
                 streams.delete(person_id);
                 this.setState({
                     streams: streams,
@@ -126,7 +173,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 for(const track of this.state.deviceAndStream.stream.getTracks()) {
                     con.addTrack(track, this.state.deviceAndStream.stream);
                 }
-                const pushToMain = this.state.mainVideoArea.length < 4 ;
+                const pushToMain = this.state.mainVideoArea.length < this.maxMainView ;
                 const arr = pushToMain ? this.state.mainVideoArea : this.state.offsetVideoArea;
 
                 arr.push(person_id);
@@ -148,10 +195,18 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         })
 
         if(!this.p2pHandler.initialized) {
-            this.p2pHandler.init();
+            this.p2pHandler.init(Storage.getInstance().getPersonID());
         } else {
             this.startConnecting();
         }
+    }
+
+    onMutePeerAudio(audio: boolean, person_id: number) {
+
+    }
+
+    onMutePeerVideo(video: boolean, person_id: number) {
+        
     }
 
     onMuteAudio(audio: boolean) {
@@ -165,6 +220,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
     onMuteVideo(video: boolean) {
         const stream = this.state.deviceAndStream.stream;
+        
         stream.getVideoTracks()[0].enabled = video;
         this.setState({
             mediaEnabled: {cam: video, audio: this.state.mediaEnabled.audio}
@@ -174,7 +230,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
     startConnecting() {
         try {
-            this.p2pHandler.initRoom(this.props.room_id, (suc: boolean, message: string) => {
+            this.p2pHandler.initRoom(Storage.getInstance().getRoomID(), (suc: boolean, message: string) => {
                 if(suc) {
                     console.log("room sucessfully initialized")
                 } else {
@@ -209,6 +265,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     row={j}
                     column={i}
                     id={`video_stream_${person_id}`}
+                    autoPlay={true}
                      />
             );
             if( i >= gridmax.column) {
@@ -227,12 +284,14 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         out.push(
             <SmallVideo 
                 id="video_stream_self"
+                autoPlay={true}
             />
         );
         for(const person_id in this.state.offsetVideoArea) {
             out.push(
                 <SmallVideo 
                     id={`video_stream_${person_id}`}
+                    autoPlay={true}
                 />
             );
         }
@@ -244,11 +303,11 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         return(
             <VideoMainGrid>
                 <VideoHeader>
-                    A
+                    <img style={{maxWidth: '200px', marginLeft: '16px'}} src="/ecocare_health_logo.png" />
                 </VideoHeader>
                 
                 <VideoArea>
-                    B
+                    
                 </VideoArea>
 
                 <OffsetVideoArea>
@@ -256,48 +315,47 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 </OffsetVideoArea>
 
                 <RightMenuArea>
-                    D
+                    
                 </RightMenuArea>
 
                 <BottomArea>
-                    <HoverBox>
-
-                    </HoverBox>
-                    <HoverBox onClick={() => {
-                        this.onMuteAudio(!this.state.mediaEnabled.audio)
-                        }}>
-                        {this.state.mediaEnabled.audio ? audioOn() : audioOff()}
+                    <MenuItemWrapper>
+                        <HoverBox onClick={() => {
+                            this.onMuteAudio(!this.state.mediaEnabled.audio)
+                            }}>
+                            {this.state.mediaEnabled.audio ? audioOn() : audioOff()}
+                            </HoverBox>
+                        <HoverBox onClick={() => {
+                            this.onMuteVideo(!this.state.mediaEnabled.cam)
+                            }}>
+                            {this.state.mediaEnabled.cam ? cameraOn() : cameraOff()}
                         </HoverBox>
-                    <HoverBox onClick={() => {
-                        this.onMuteVideo(!this.state.mediaEnabled.cam)
-                        }}>
-                        {this.state.mediaEnabled.cam ? cameraOn() : cameraOff()}
-                    </HoverBox>
-                    <HoverBox onClick={(event: SyntheticEvent) => {
-                        event.stopPropagation();
-                        }}>
-                        {settings()}
-                    </HoverBox>
-                    <HoverBox onClick={(event: SyntheticEvent) => {
-                        event.stopPropagation();
-                        }}>
-                        {shareScreen()}
-                    </HoverBox>
-                    <HoverBox onClick={(event: SyntheticEvent) => {
-                        event.stopPropagation();
-                        }}>
-                        {uploadFile()}
-                    </HoverBox>
-                    <HoverBox onClick={(event: SyntheticEvent) => {
-                        event.stopPropagation();
-                        }}>
-                        {chat()}
-                    </HoverBox>
-                    <HoverBox onClick={(event: SyntheticEvent) => {
-                        event.stopPropagation();
-                        }}>
-                        {stop()}
-                    </HoverBox>
+                        <HoverBox onClick={(event: SyntheticEvent) => {
+                            event.stopPropagation();
+                            }}>
+                            {settings()}
+                        </HoverBox>
+                        <HoverBox onClick={(event: SyntheticEvent) => {
+                            event.stopPropagation();
+                            }}>
+                            {shareScreen()}
+                        </HoverBox>
+                        <HoverBox onClick={(event: SyntheticEvent) => {
+                            event.stopPropagation();
+                            }}>
+                            {uploadFile()}
+                        </HoverBox>
+                        <HoverBox onClick={(event: SyntheticEvent) => {
+                            event.stopPropagation();
+                            }}>
+                            {chat()}
+                        </HoverBox>
+                        <HoverBox onClick={(event: SyntheticEvent) => {
+                            event.stopPropagation();
+                            }}>
+                            {stop()}
+                        </HoverBox>
+                    </MenuItemWrapper>
                 </BottomArea>
             </VideoMainGrid>
 

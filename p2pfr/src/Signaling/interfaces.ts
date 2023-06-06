@@ -20,6 +20,10 @@ export interface Answer extends SocketMessage {
 }
 
 export interface RecIceCandidate extends SocketMessage {
-    candidate: RTCIceCandidate;
+    candidate: RTCIceCandidate | RTCIceCandidateInit;
     person_id_receive: number
+}
+
+export interface RawMessage extends SocketMessage {
+    message: string
 }

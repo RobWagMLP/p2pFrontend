@@ -7,9 +7,13 @@ import { audioOff, audioOn, cameraOff, cameraOn, settings } from "../Helper/icon
 import { DeviceOverlay } from "../Overlays/deviceOverlay";
 import { P2PHandler } from "../Signaling/p2pHandler";
 import { Button } from "../Elements/button";
+import { Navigate } from "react-router";
+import withRouter from "../hocs/withRouter";
+import { VideoChatComponent } from "./VideoChatComponents";
 
 interface IProps {
     room_id: number;
+    person_id: number;
 }
 
 interface IState {
@@ -27,15 +31,23 @@ interface IState {
     canStart: boolean;
 }
 
-export class EntryComponent extends React.Component<IProps, IState> {
+class EntryComponent extends React.Component<IProps, IState> {
 
         private devicEntryHeight = 45;
         private deviceOverlayOffset= 135;
 
-        p2pHandler: P2PHandler = P2PHandler.getInstance();
-
+        p2pHandler: P2PHandler;
+   
         constructor(props: IProps) {
             super(props);
+            console.log(props);
+
+            this.p2pHandler = new P2PHandler();
+
+            Storage.getInstance().setPersonID(props.person_id);
+            Storage.getInstance().setRoomID(props.room_id);
+            Storage.getInstance().setP2pHandler(this.p2pHandler);
+
             this.state={
                 cam  : true,
                 audio: true,
@@ -46,19 +58,8 @@ export class EntryComponent extends React.Component<IProps, IState> {
                 socketAvailable: false,
                 canStart: false
             }
-        }
 
-        onStart() {
-            Storage.getInstance().setUsername(this.state.name);
-            Storage.getInstance().setCamAndAudio({audio: this.state. audio, cam: this.state.cam});
 
-            this.p2pHandler.setWebsocketConnectionIssueCallback(() => null )
-
-            this.p2pHandler.setonOpenCallback(() => null )
-            
-        }
-
-        componentDidMount(): void {
             this.p2pHandler.setWebsocketConnectionIssueCallback((ev: Event) =>{
                 console.log(ev);
                 this.setState({
@@ -74,9 +75,29 @@ export class EntryComponent extends React.Component<IProps, IState> {
                 })
             })
             
-            //this.p2pHandler.init();
+            this.p2pHandler.init(this.props.person_id);
+
+            this.onStart = this.onStart.bind(this);
+        }
+
+        onStart() {
+            Storage.getInstance().setUsername(this.state.name);
+            Storage.getInstance().setCamAndAudio({audio: this.state. audio, cam: this.state.cam});
+
+            this.p2pHandler.setWebsocketConnectionIssueCallback(() => null )
+
+            this.p2pHandler.setonOpenCallback(() => null );
+
+            this.setState({
+                canStart: true
+            })
+            
+        }
+
+        componentDidMount(): void {
             this.handleMedia();
         }
+
 
         async handleMedia(constraints = {audio: true, video: true}) {
             
@@ -102,6 +123,7 @@ export class EntryComponent extends React.Component<IProps, IState> {
                     video.srcObject = this.state.stream;
                 })
             } catch(err: any) {
+                console.log(err);
                 this.setState({
                     mediaAvailable: false,
                     error: "No Media Permission received"
@@ -110,13 +132,16 @@ export class EntryComponent extends React.Component<IProps, IState> {
         }
 
         render() {
+            if(this.state.canStart) {
+                return <VideoChatComponent />
+            }
             return(
                 <MainBox onClick={() => {
                     this.setState({showDeviceMenu: false})
                 }}>
                     {this.state.showDeviceMenu? <DeviceOverlay deviceList={this.state.devices} pos={this.state.devicePos}/> : null}
                     <HeaderBox>
-                        <img src="/ecocare_health_logo.png" />
+                        <img style={{maxWidth: '400px'}} src="/ecocare_health_logo.png" />
                     </HeaderBox>
                     <HeaderBox style={{justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bodys.footer_background}}>
                         <MiddleHeading>
@@ -130,7 +155,7 @@ export class EntryComponent extends React.Component<IProps, IState> {
                             </ErrBox>
                         :<ContentBox>
                             <VideoPreviewBox>
-                                <video style={{border: `2px solid ${theme.font.heading_color}`, borderRadius: '4px'}}
+                                <video style={{border: `2px solid ${theme.font.heading_color}`, borderRadius: '4px', maxWidth: '40%'}}
                                     autoPlay={true}
                                 />
                             </VideoPreviewBox>
@@ -201,3 +226,5 @@ export class EntryComponent extends React.Component<IProps, IState> {
             )
         }
 }
+
+export default withRouter(EntryComponent);

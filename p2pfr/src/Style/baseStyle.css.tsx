@@ -78,7 +78,11 @@ export const ContentBox = styled.div`
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: calc(100vh - 600px);
+    height: calc(100vh - 400px);
+    flex-wrap: nowrap;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 700px;
 `;
 
 export const SettingsBox = styled.div`
@@ -104,7 +108,7 @@ export const Footer = styled.div`
 
 export const Window = styled.div`
     width: 100%;
-    height: calc(100vh - 100px);
+
 `;
 
 export const HoverBox = styled.div`
@@ -113,12 +117,17 @@ export const HoverBox = styled.div`
     margin: 16px;
     :hover {
         cursor: pointer;
+        svg {
+            fill: ${theme.font.heading_color};
+        }
     }
 `;
+
 
 export const VideoPreviewBox = styled.div`
     margin: 16px;
     display: inline-block;
+    width: 100%;
 `;
 
 export const StyledLine = styled.div`
@@ -151,45 +160,57 @@ export const StyledButton = styled.div<{disabled? : boolean}>`
 `;
 
 export const VideoMainGrid = styled.div`
-    margin: ${theme.margins.global_margin};
     display: grid;
-    grid-template-columns: [first]   70% [line-2] 20% [line-3] 10% [end];
-    grid-template-rows   : [first-r] 10% [row-2] 70% [row-3] 20% [end-row];
+    grid-template-columns: [first]   80% [line-2] 10% [line-3] 10% [end];
+    grid-template-rows   : [first-r] 5% [row-2] 85% [row-3] 10% [end-row];
     background-color: ${theme.font.base_color};
+    height: 100vh;
+    width: 100vw;
 `;
 
 export const VideoHeader = styled.div`
     grid-column-start: 1;
-    grid-column-end: 3;
+    grid-column-end: 4;
+    border: 4px solid ${theme.font.heading_color};
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: white;
+    border-radius: 4px;
 `;
 
 export const BottomArea = styled(VideoHeader)`
     grid-column-start: 1;
-    grid-column-end: 3;
+    grid-column-end: 4;
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    margin: 32px;
     border-radius: 4px;
-    border: 4px solid ${theme.font.heading_color};
+    border: 2px solid ${theme.font.heading_color};
+    background-color: ${theme.font.base_color};
 `;
 
 export const VideoArea = styled.div`
     display: grid;
     grid-template-rows: 50% 50%;
     grid-template-column: 50% 50%;
+    border-left: 2px solid ${theme.font.heading_color};
 `;
 
 export const OffsetVideoArea = styled.div`
     display: flex;
-    justify-content: center;
+    aling-items: center;
     flex-direction: column;
     padding: 8px;
+    border-left: 2px solid ${theme.font.heading_color};
+    overflow-y: auto;
 `;
 
 
 export const RightMenuArea = styled.div`
+    border-left: 2px solid ${theme.font.heading_color};
+    border-right: 2px solid ${theme.font.heading_color};
 `;
 
 export const VideoElement = styled.video<{row: number, column: number, rowspan: number, colspan: number}>`
@@ -197,12 +218,25 @@ export const VideoElement = styled.video<{row: number, column: number, rowspan: 
     grid-column-end:   ${props => props.column + props.colspan};
     grid-row-start: ${props => props.row};
     grid-row-end:   ${props => props.row + props.rowspan};
-    border: 2px solid white;
+    border: 1px solid white;
     border-radius: 4px;
     margin: 16px;
 `;
 
 export const SmallVideo = styled.video`
+    border: 1px solid white;
+    border-radius: 4px;
     margin: 16px;
-    width: 95%;
+ `;
+
+ export const MenuItemWrapper = styled.div`
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    border-radius: 8px;
+    background-color: white;
+    border: 4px solid ${theme.font.heading_color};
+    width: 50%;
+    height: 32px;
  `;

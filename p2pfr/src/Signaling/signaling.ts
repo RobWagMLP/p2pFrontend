@@ -1,4 +1,4 @@
-import {Offer, Answer, RecIceCandidate, RequestRoom, SingleOffer} from './interfaces.ts'
+import {Offer, Answer, RecIceCandidate, RequestRoom, SingleOffer, RawMessage} from './interfaces.ts'
 
 export class Signaling {
 
@@ -18,15 +18,19 @@ export class Signaling {
     constructor() {
 
     }
+
+    disconnect() {
+        this.ws.close();
+    }
     
     connect(person_id?: number) {
-        const addString = person_id == null && process.env.ENV === 'prod' ? `` : `?person_id=${person_id}`;
-
-        const host = process.env.WEBSOCKET_HOST + addString; //only for dev, in prod this comes from aws tocken.
-
+        const addString = person_id == null && process.env.REACT_APP_APP_ENV === 'prod' ? `` : `?person_id=${person_id}`;
+        
+        const host = process.env.REACT_APP_WEBSOCKET_HOST + addString; //only for dev, in prod this comes from aws tocken.
         this.ws = new WebSocket(host);
-    
+
         this.ws.onerror = (ev: Event) => {
+            console.log(ev);
             this.onWebSocketError(ev);
         };
 
@@ -124,22 +128,39 @@ export class Signaling {
 
 
     sendRoomRequest(roomRequest: RequestRoom) {
-        this.ws.send(JSON.stringify(roomRequest));
+        if(this.ws.readyState === 1) {
+            this.ws.send(JSON.stringify(roomRequest));
+        }
     }
 
     sendOffer(offer: Offer) {
-        this.ws.send(JSON.stringify(offer));
+        if(this.ws.readyState === 1) {
+            this.ws.send(JSON.stringify(offer));
+        }
     }   
 
     sendSingleOffer(offer: SingleOffer) {
-        this.ws.send(JSON.stringify(offer));
+        if(this.ws.readyState === 1) {
+            this.ws.send(JSON.stringify(offer));
+        }
     }   
 
     sendAnswer(answer: Answer) {
-        this.ws.send(JSON.stringify(answer));
+        if(this.ws.readyState === 1) {
+            this.ws.send(JSON.stringify(answer));
+        }
     }
 
     sendIceCandidate(candidate: RecIceCandidate) {
-        this.ws.send(JSON.stringify(candidate));
+        if(this.ws.readyState === 1) {
+            this.ws.send(JSON.stringify(candidate));
+        }
+    }
+
+    sendMessage(message: RawMessage) {
+        console.log(this.ws.readyState);
+        if(this.ws.readyState === 1) {
+            this.ws.send(JSON.stringify(message));
+        }
     }
 }

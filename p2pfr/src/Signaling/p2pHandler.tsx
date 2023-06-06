@@ -1,3 +1,4 @@
+
 import { getIceServer } from "../Helper/util";
 import { Signaling } from "./signaling";
 import { Storage }from "../Helper/storage"
@@ -38,23 +39,18 @@ export class P2PHandler {
     
     private negoiatation: Map<number, {polite: boolean, sendingOffer: boolean}>;
 
-    private constructor() {
+    public constructor() {
         this.connections = new Map<number, RTCPeerConnection>();
         this.negoiatation = new Map<number, {polite: boolean, sendingOffer: boolean}>;
         this.initialized = false;
         this.canEnterRoom = false;
         this.canReqestRoom = false;
+        this.errorHistory = [];
+        this.statusHistory = [];
     }
 
     public connections: Map<number, RTCPeerConnection>;
     public initialized: boolean;
-
-    static getInstance() {
-        if(this.instance == null) {
-            this.instance = new P2PHandler;
-        }
-        return this.instance;
-    }
 
     setErrorCallback(method:  (error: string ) => void) {
         this.errorCallback = method;
@@ -90,8 +86,8 @@ export class P2PHandler {
         this.onNewConnection = method;
     }
     
-    private setupConnection(person_id: number) : RTCPeerConnection{
-        const connection = new RTCPeerConnection({iceServers: this.iceServer});
+    private async setupConnection(person_id: number) : Promise<RTCPeerConnection>{
+        const connection = await new RTCPeerConnection({iceServers: this.iceServer.splice(3, 2)});
 
         this.negoiatation.set(person_id, {polite: person_id > Storage.getInstance().getPersonID(), sendingOffer: false});
 
@@ -131,7 +127,7 @@ export class P2PHandler {
             this.onTrackReceived(person_id, ev);
         }
 
-        return connection;
+        return Promise.resolve(connection);
     }
 
     ignoreRequest(person_id: number): boolean {
@@ -140,7 +136,13 @@ export class P2PHandler {
               ( this.negoiatation.get(person_id).sendingOffer || this.connections.get(person_id).signalingState !== 'stable');
     }
 
-    async init() {
+    disconnect() {
+        if(this.signaling) {
+            this.signaling.disconnect();
+        }
+    }
+
+    async init(person_id: number) {
         if(!this.initialized) {
             this.iceServer = await getIceServer();
 
@@ -179,13 +181,13 @@ export class P2PHandler {
                 this.statusHistory.push(status);
             });
 
-            this.signaling.addOnRoomInfoListener((userList: number[]) => {
+            this.signaling.addOnRoomInfoListener( async (userList: number[]) =>  {
                 this.roomReadyCallback(true);
 
                 this.canEnterRoom = true;
 
                 for(const o of userList) {
-                    const connection = this.setupConnection(o);
+                    const connection = await this.setupConnection(o);
                     this.connections.set(o, connection);
 
                     this.onNewConnection(connection, o);
@@ -205,20 +207,18 @@ export class P2PHandler {
                 }
             });
 
-            this.signaling.addIceCandidateListener(async (candidate: RTCIceCandidate, person_id: number) => {
+            this.signaling.addIceCandidateListener(async (candidate: RTCIceCandidateInit | RTCIceCandidate, person_id: number) => {
                 this.notify(`ice candidate received from person ${person_id}`);
                 
                 if(this.connections.has(person_id)) {
                     const connection = this.connections.get(person_id);
-                    try {
+                    try {                  
+                        //@ts-ignore
+                        candidate.usernameFragment = null;
                         await connection.addIceCandidate(candidate);
                         this.connections.set(person_id, connection);
                     } catch(err: any) {
                         console.log(`error setting ice candidate for ${person_id}, error: ${err}`);
-
-                        if(!this.ignoreRequest(person_id)) {
-                            throw err;
-                        }
                     }
                 }
             });
@@ -227,20 +227,25 @@ export class P2PHandler {
                 this.notify(`offer received from person ${person_id}`);
                 
                 if(this.ignoreRequest(person_id)) {
+                    console.log("Ignoring request", this.negoiatation);
                     return;
                 }
 
-                const connection = this.setupConnection(person_id);
+                const connection = await this.setupConnection(person_id);
                 const sessionDesc = new RTCSessionDescription(offer);
 
                 await connection.setRemoteDescription(sessionDesc);
 
                 //const answer = await connection.createAnswer();
                 await connection.setLocalDescription();
+
+
+                this.connections.set(person_id, connection);
                 
                 this.onNewConnection(connection, person_id);
 
                 this.signaling.sendAnswer({type: "accept_offer_from_peer", answer: connection.localDescription});
+
             });
 
             this.signaling.addOrderListener((order: string) => {
@@ -257,7 +262,7 @@ export class P2PHandler {
                 }
             })
 
-            this.signaling.connect(Storage.getInstance().getPersonID());
+            this.signaling.connect(person_id);
 
             this.initialized = true;
         }
@@ -302,5 +307,9 @@ export class P2PHandler {
             }
             this.signaling.sendOffer({type: "send_offer_to_peers", offer: offer});
         }
+    }
+
+    sendMessage(message: string) {
+        this.signaling.sendMessage({type: "message", message: message});
     }
 }

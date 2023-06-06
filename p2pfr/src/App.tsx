@@ -1,12 +1,10 @@
 import React from 'react';
 import './App.css';
-import * as dotenv from "dotenv";
 import { RouteComponent } from './Components/RouteComponent';
 import {Window, Footer} from './Style/baseStyle.css'
 
-dotenv.config({ path: '.env' });
-
 function App() {
+  console.log(process.env);
   return (
     <div className="App">
       <Window>

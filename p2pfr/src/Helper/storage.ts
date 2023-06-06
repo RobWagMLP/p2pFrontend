@@ -1,3 +1,5 @@
+import { P2PHandler } from "../Signaling/p2pHandler";
+
 export class Storage {
     
     private static instance: Storage;
@@ -15,6 +17,8 @@ export class Storage {
         devices: Array<MediaDeviceInfo>;
         stream:  MediaStream
     }
+
+    private p2phandler: P2PHandler;
 
     private constructor() {
 
@@ -73,5 +77,13 @@ export class Storage {
 
     getMediaDeviceAndStream(): { devices: any; stream:  MediaStream} {
         return this.mediaDeviceAndStream;
+    }
+
+    setP2pHandler(p2phandler: P2PHandler) {
+        this.p2phandler = p2phandler;
+    }
+
+    getP2pHandler(): P2PHandler {
+        return this.p2phandler;
     }
 }

@@ -249,7 +249,7 @@ export class P2PHandler {
 
                 this.connections.set(person_id, connection);
                 
-                if(knownConnection) {
+                if(!knownConnection) {
                     this.onNewConnection(connection, person_id);
                 }
                 this.signaling.sendAnswer({type: "accept_offer_from_peer", answer: connection.localDescription});

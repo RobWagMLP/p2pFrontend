@@ -164,23 +164,31 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
                 const streams = this.state.streams;
 
+                const senders = this.state.senders;
+
                 streams.delete(person_id);
+                senders.delete(person_id);
 
                 this.setState({
                     streams: streams,
                     mainVideoArea: areas.mainVideoArea,
-                    offsetVideoArea: areas.offsetVideoArea
+                    offsetVideoArea: areas.offsetVideoArea,
+                    senders: senders
                 })
             }
         })
 
         this.p2pHandler.setOnNewConnectioncallback(async (con: RTCPeerConnection, person_id) =>  {
 
-                const stream = this.state.screenShared ? this.state.screenMedia : this.state.deviceAndStream.stream;
+                const stream =  this.state.deviceAndStream.stream;
 
                 const senders = this.setSingleStream(con, stream);
+
+                if(this.state.screenShared) {
+                    this.swapSingleVideoStream(this.state.screenMedia, senders);
+                }
                 
-                const areas = this.handleVideoPush(person_id)
+                const areas  = this.handleVideoPush(person_id)
 
                 const senderMap = this.state.senders;
 
@@ -288,7 +296,8 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
     setupVideoArea() : Array<ReactElement> {
         const out = [];
-        const participans = this.state.connections.size;
+        const participans = this.state.mainVideoArea.length;
+
         const colspan = participans > 1 ? 1: 2;
         const rowspan = participans > 1 ? 1: 2;
  
@@ -346,14 +355,27 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         }
     }
 
-    swapVideoStreams(stream: MediaStream) {
+    async swapVideoStreams(stream: MediaStream) {
         const senderMap = this.state.senders;
 
         for(const senderList of senderMap) {
+            await this.swapSingleVideoStream(stream, senderList[1]);
+        }
+    }
 
-            for(const sender of senderList[1]) {
-                if(sender.track.kind === 'video') {
-                    sender.replaceTrack(stream.getVideoTracks()[0]);
+    async swapSingleVideoStream(stream: MediaStream, senderList: Array<RTCRtpSender>) {
+
+        for(const sender of senderList) {
+            if(sender.track.kind === 'video') {
+                try{
+                    await sender.replaceTrack(stream.getVideoTracks()[0]);
+
+                } catch(err: any) {
+                    console.log(err);
+
+                    this.setState({
+                        error: err.cause
+                    });
                 }
             }
         }
@@ -371,7 +393,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
     setSelfVideoTrack(stream: MediaStream) {
         const videoSelf     = document.getElementById('video_stream_self') as HTMLVideoElement;
-        
+
         const videoStream = new MediaStream();
 
         videoStream.addTrack(stream.getVideoTracks()[0]);

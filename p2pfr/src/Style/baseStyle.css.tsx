@@ -50,6 +50,67 @@ export const StyledInput = styled.input`
     }
 `;
 
+export const StyledTextField = styled.textarea`
+    border: 0;
+    border-bottom: 2px solid ${theme.font.base_color};
+    width: 100%;
+    font-size: 18px;
+    line-height: 20px;
+    height: 20px;
+    text-align: center;
+    padding: 10px;
+    background: transparent;
+    height: 20%;
+    color: ${theme.font.heading_color};
+    :focus {
+         outline: 0;
+         color: ${theme.font.base_color};
+    }
+`;
+
+export const ChatWrapper = styled.div`
+    display: flex;
+    flex-direction: column;
+    margin: 8px;
+`;
+
+export const FileBox = styled.div`
+    margin: 4px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    height: 20%;
+`;
+
+export const MessageBox = styled.div`
+    height: 60%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    border: 2px solid ${theme.font.heading_color};
+    border-radius: 4px;
+    box-shadow: inset 0.3em 0.3em 0.9em ${theme.font.base_color};
+`;
+
+export const Message = styled.div`
+    display: flex;
+    flex-direction: column;
+`;
+
+export const Name = styled.div`
+    width: 30%;
+    overflow: visible;
+    overflow-wrap: normal;
+`;
+
+export const Text = styled.div`
+    width: 70%;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+`;
+
+
 export const KeyValueWrapper = styled.div`
     display: flex;
     margin: ${theme.margins.base_margin};

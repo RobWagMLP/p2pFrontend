@@ -7,50 +7,49 @@ export class P2PHandler {
 
     private iceServer: [];
 
-    private static instance: P2PHandler;
-
     private signaling: Signaling;
     
-    private roomReadyCallback: (suc: boolean, message?: string) => void;
+    private roomReadyCallback:                (suc: boolean, message?: string) => void;
 
-    private errorCallback:     (error: string ) => void;
+    private errorCallback:                    (error: string ) => void;
 
-    private connectiontStateCallback: (person_id: number, state: any) => void;
+    private connectiontStateCallback:         (person_id: number, state: any) => void;
 
     private websocketConnectionIssueCallback: (ev: Event) => void;
 
-    private onTrackReceived: (person_id: number, ev: RTCTrackEvent) => void;
+    private onTrackReceived:                  (person_id: number, ev: RTCTrackEvent) => void;
 
-    private notify:  (message: string) => void;
+    private notify:                           (message: string) => void;
 
-    private onOpenCallback: () => void;
+    private onOpenCallback:                   () => void;
 
-    private onOrder: (order: string) => void;
+    private onOrder:                          (order: string) => void;
 
-    private onNewConnection: (con: RTCPeerConnection, person_id: number) => void;
+    private onNewConnection:                  (con: RTCPeerConnection, person_id: number) => void;
 
     private statusHistory: Array<string>;
 
-    private errorHistory: Array<string>;
+    private errorHistory:  Array<string>;
 
     private canReqestRoom: boolean;
 
-    private canEnterRoom: boolean;
+    private canEnterRoom:  boolean;
     
-    private negoiatation: Map<number, {polite: boolean, sendingOffer: boolean}>;
+    private negoiatation:  Map<number, {polite: boolean, sendingOffer: boolean}>;
+
+    public  connections:   Map<number, RTCPeerConnection>;
+
+    public  initialized:   boolean;
 
     public constructor() {
-        this.connections = new Map<number, RTCPeerConnection>();
-        this.negoiatation = new Map<number, {polite: boolean, sendingOffer: boolean}>;
-        this.initialized = false;
-        this.canEnterRoom = false;
+        this.connections   = new Map<number, RTCPeerConnection>();
+        this.negoiatation  = new Map<number, {polite: boolean, sendingOffer: boolean}>;
+        this.initialized   = false;
+        this.canEnterRoom  = false;
         this.canReqestRoom = false;
-        this.errorHistory = [];
+        this.errorHistory  = [];
         this.statusHistory = [];
     }
-
-    public connections: Map<number, RTCPeerConnection>;
-    public initialized: boolean;
 
     setErrorCallback(method:  (error: string ) => void) {
         this.errorCallback = method;
@@ -85,6 +84,10 @@ export class P2PHandler {
     setOnNewConnectioncallback(method: (con: RTCPeerConnection, person_id: number) => void) {
         this.onNewConnection = method;
     }
+
+    setRoomReadycallback(method:  (suc: boolean, message?: string) => void) {
+        this.roomReadyCallback = method;
+    }
     
     private async setupConnection(person_id: number) : Promise<RTCPeerConnection>{
         const connection = await new RTCPeerConnection({iceServers: this.iceServer.splice(3, 2)});
@@ -96,14 +99,6 @@ export class P2PHandler {
                 this.signaling.sendIceCandidate({type: "send_ice_candidate_to_peers", candidate: ev.candidate, person_id_receive: person_id});
             }
         }
-        
-        connection.addEventListener('connectionstatechange', (event: Event) => {
-            console.log(connection.connectionState, person_id);
-            if(connection.connectionState === "closed") {
-                this.connections.delete(person_id);
-            }
-            this.connectiontStateCallback(person_id, connection.connectionState);
-        });
 
         connection.onnegotiationneeded = (ev: Event) => {
             try{
@@ -126,6 +121,15 @@ export class P2PHandler {
         connection.ontrack = (ev: RTCTrackEvent) => {
             this.onTrackReceived(person_id, ev);
         }
+
+        connection.addEventListener('connectionstatechange', (event: Event) => {
+            console.log(connection.connectionState, person_id);
+            if(connection.connectionState === "closed") {
+                this.connections.delete(person_id);
+                this.negoiatation.delete(person_id);
+            }
+            this.connectiontStateCallback(person_id, connection.connectionState);
+        });
 
         return Promise.resolve(connection);
     }
@@ -230,8 +234,11 @@ export class P2PHandler {
                     console.log("Ignoring request", this.negoiatation);
                     return;
                 }
+                
+                let knownConnection = this.connections.has(person_id);
 
-                const connection = await this.setupConnection(person_id);
+                const connection = knownConnection ? this.connections.get(person_id) : await this.setupConnection(person_id);
+
                 const sessionDesc = new RTCSessionDescription(offer);
 
                 await connection.setRemoteDescription(sessionDesc);
@@ -242,8 +249,9 @@ export class P2PHandler {
 
                 this.connections.set(person_id, connection);
                 
-                this.onNewConnection(connection, person_id);
-
+                if(knownConnection) {
+                    this.onNewConnection(connection, person_id);
+                }
                 this.signaling.sendAnswer({type: "accept_offer_from_peer", answer: connection.localDescription});
 
             });
@@ -268,11 +276,10 @@ export class P2PHandler {
         }
     }
 
-    initRoom(room_id: number, success: (suc: boolean, message?: string) => void) {
+    initRoom(room_id: number) {
         if(!this.canReqestRoom) {
             throw new Error('Socket not ready');
         }
-        this.roomReadyCallback = success;
         this.signaling.sendRoomRequest({type: "request_room", room_id: room_id});
     }
 

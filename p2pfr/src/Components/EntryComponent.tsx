@@ -33,8 +33,8 @@ interface IState {
 
 class EntryComponent extends React.Component<IProps, IState> {
 
-        private devicEntryHeight = 45;
-        private deviceOverlayOffset= 135;
+        private devicEntryHeight = 22;
+        private deviceOverlayOffset= 100;
 
         p2pHandler: P2PHandler;
    

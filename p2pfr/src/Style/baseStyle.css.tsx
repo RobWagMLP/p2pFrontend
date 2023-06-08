@@ -80,7 +80,7 @@ export const ContentBox = styled.div`
     align-items: center;
     height: calc(100vh - 400px);
     flex-wrap: nowrap;
-    overflow-y: auto;
+    overflow-y: hidden;
     overflow-x: hidden;
     min-height: 700px;
 `;

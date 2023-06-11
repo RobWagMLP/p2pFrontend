@@ -22,6 +22,8 @@ export class ChatComponent extends PureComponent<IProps> {
 
     constructor(props: IProps) {
         super(props);
+
+        this.scrollToBottom = this.scrollToBottom.bind(this);
     }
 
     componentDidMount(): void {
@@ -47,9 +49,10 @@ export class ChatComponent extends PureComponent<IProps> {
                     </Text>
                 </Message>
         )
+        let i = 0;
         for(const o of this.props.messages) {
             out.push(
-                <Message>
+                <Message key={o.name + i}>
                     <Name
                         color={Colors[o.name.length%6]}>
                         {o.name}:
@@ -62,14 +65,24 @@ export class ChatComponent extends PureComponent<IProps> {
                     </Text>
                 </Message>
             )
+            ++i;
         }
         return out;
+    }
+
+    scrollToBottom() {
+        const el = document.getElementById('message_box_area');
+        if(el) {
+            el.scroll({top: el.scrollHeight, behavior: 'smooth'});
+        }
     }
 
     render()  {
         return(
             <ChatWrapper>
-                <MessageBox>
+                <MessageBox 
+                    ref={() => this.scrollToBottom()}
+                    id="message_box_area">
                     {this.getMessageBoxContent()}
                 </MessageBox>
                 <StyledTextField

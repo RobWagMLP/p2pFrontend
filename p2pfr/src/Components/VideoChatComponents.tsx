@@ -352,7 +352,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
     }
 
     onMutePeerAudio(audio: boolean, person_id: number) {
-        console.log("Triggered");
+
         const streams = this.state.streams;
         if(!streams || !streams.has(person_id)) {
             return;
@@ -451,6 +451,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     <VideoElement
                         ref={() => {this.setVideoSrcObject(person_id)}}
                         id={`video_stream_${person_id}`}
+                        key={`video_stream_${person_id}`}
                         autoPlay={true}
                         width={width}
                         maxheight={maxHeight}
@@ -473,6 +474,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             <SmallVideoWrapper>
                 <SmallVideo 
                     id="video_stream_self"
+                    key="video_stream_self"
                     autoPlay={true}
                 />
                  <SmallInfoField>
@@ -491,6 +493,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     <SmallVideo 
                         ref={() => {this.setVideoSrcObject(person_id)}}
                         id={`video_stream_${person_id}`}
+                        key={`video_stream_${person_id}`}
                         autoPlay={true}
                     />
                      <SmallInfoField>

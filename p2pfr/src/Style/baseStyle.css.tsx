@@ -50,17 +50,24 @@ export const StyledInput = styled.input`
     }
 `;
 
+export const StyledLink = styled.a`
+    color: ${theme.font.heading_color};
+    text-decoration: none;
+    font-weight: 500;
+`;
+
 export const StyledTextField = styled.textarea`
     border: 0;
-    border-bottom: 2px solid ${theme.font.base_color};
-    width: 100%;
-    font-size: 18px;
-    line-height: 20px;
-    height: 20px;
+    border-bottom: 2px solid ${theme.font.heading_color};
+    font-size: 14px;
+    line-height: 16px;
     text-align: center;
+    margin-top: 8px;
     padding: 10px;
-    background: transparent;
-    height: 20%;
+    background-color: white;
+    border-radius: 4px;
+    height: 8%;
+    text-align: left;
     color: ${theme.font.heading_color};
     :focus {
          outline: 0;
@@ -71,11 +78,14 @@ export const StyledTextField = styled.textarea`
 export const ChatWrapper = styled.div`
     display: flex;
     flex-direction: column;
-    margin: 8px;
+    margin: 16px;
+    height: 50%;
+    text-align: left;
 `;
 
 export const FileBox = styled.div`
-    margin: 4px;
+    margin-top: 16px;
+    margin-bottom: 8px;
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
@@ -83,31 +93,43 @@ export const FileBox = styled.div`
 `;
 
 export const MessageBox = styled.div`
-    height: 60%;
+    height: 70%;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    align-items: center;
     border: 2px solid ${theme.font.heading_color};
     border-radius: 4px;
-    box-shadow: inset 0.3em 0.3em 0.9em ${theme.font.base_color};
+    background-color: white;
+    padding: 16px;
 `;
 
 export const Message = styled.div`
     display: flex;
     flex-direction: column;
-`;
-
-export const Name = styled.div`
-    width: 30%;
-    overflow: visible;
-    overflow-wrap: normal;
+    border-bottom: 2px solid ${theme.font.heading_color};
+    margin-bottom: 4px;
+    border-radius: 8px;
+    padding: 8px;
+    width: 95%;
+    justify-content: flex-start;
+    align-items: flex-start;
 `;
 
 export const Text = styled.div`
-    width: 70%;
+    overflow: visible;
+    overflow-wrap: normal;
+    font-size: 16px;
+    font-family: ${theme.font.font_family}
+`;
+
+export const Name = styled.div<{color: string}>`
     text-overflow: ellipsis;
     overflow: hidden;
+    color: ${props => props.color};
     white-space: nowrap;
+    font-size: 10px;
+    margin-bottom: 4px;
 `;
 
 
@@ -127,10 +149,10 @@ export const KeyText = styled.div`
 `;
 
 export const HeaderBox = styled.div`
-    height: 100px;
+    height: 80px;
     width: 100%;
     display: flex;
-    margin-bottom: 32px;
+    margin-bottom: 16px;
 `;
 
 export const ContentBox = styled.div`
@@ -139,9 +161,9 @@ export const ContentBox = styled.div`
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: calc(100vh - 400px);
+    height: calc(100vh - 300px);
     flex-wrap: nowrap;
-    overflow-y: hidden;
+    overflow-y: auto;
     overflow-x: hidden;
     min-height: 700px;
 `;
@@ -170,6 +192,23 @@ export const Footer = styled.div`
 export const Window = styled.div`
     width: 100%;
 
+`;
+
+export const IconWrapperSmall = styled.div`
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    svg {
+        fill: ${theme.font.heading_color};
+    }
+`;
+
+export const IconWrapperBig = styled.div`
+    width: 32px;
+    height: 32px;
+    svg {
+        fill: ${theme.font.heading_color};
+    }
 `;
 
 export const HoverBox = styled.div`
@@ -222,7 +261,7 @@ export const StyledButton = styled.div<{disabled? : boolean}>`
 
 export const VideoMainGrid = styled.div`
     display: grid;
-    grid-template-columns: [first]   80% [line-2] 10% [line-3] 10% [end];
+    grid-template-columns: [first]   80% [line-2] 20% [end];
     grid-template-rows   : [first-r] 5% [row-2] 85% [row-3] 10% [end-row];
     background-color: ${theme.font.base_color};
     height: 100vh;
@@ -253,41 +292,87 @@ export const BottomArea = styled(VideoHeader)`
 `;
 
 export const VideoArea = styled.div`
-    display: grid;
-    grid-template-rows: 50% 50%;
-    grid-template-column: 50% 50%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    border-left: 2px solid ${theme.font.heading_color};
+`;
+
+export const RightArea = styled.div`
+    display: flex;
+    flex-direction: column;
     border-left: 2px solid ${theme.font.heading_color};
 `;
 
 export const OffsetVideoArea = styled.div`
     display: flex;
-    aling-items: center;
-    flex-direction: column;
+    justify-content: center;
+    flex-direction: row;
+    flex-wrap: wrap;
     padding: 8px;
-    border-left: 2px solid ${theme.font.heading_color};
+    height: 50%;
     overflow-y: auto;
 `;
 
 
 export const RightMenuArea = styled.div`
-    border-left: 2px solid ${theme.font.heading_color};
     border-right: 2px solid ${theme.font.heading_color};
 `;
 
-export const VideoElement = styled.video<{row: number, column: number, rowspan: number, colspan: number}>`
-    grid-column-start: ${props => props.column};
-    grid-column-end:   ${props => props.column + props.colspan};
-    grid-row-start: ${props => props.row};
-    grid-row-end:   ${props => props.row + props.rowspan};
-    border: 1px solid white;
+
+export const VideoWrapper = styled.div<{width: string}>`
+    width: ${props => props.width};
+`;
+
+export const InfoField = styled.div` 
+    height: 32px;
+    font-size: 24px;
+    margin-top: -64px;
+    margin-left: 16px;
+    font-weight: 400;
+    color: white;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: ${theme.font.base_color};
+    border-radius: 4px;
+    padding: 4px;
+    max-width: 40%;
+`;
+
+
+export const SmallInfoField = styled(InfoField)` 
+    height: 16px;
+    font-size: 16px;
+    margin-top: -32px;
+    margin-left: 12px;
+    color: white;
+    background:transparent;
+    border: none;
+`;
+
+export const VideoElement = styled.video<{width: string, maxheight: string}>`
+    border-bottom: 1px solid white;
     border-radius: 4px;
     margin: 16px;
+    padding: 4px;
+    width: ${props => props.width};
+    max-height: ${props => props.maxheight};
+`;
+
+export const SmallVideoWrapper = styled.div`
+    display: flex;
+    flex-direction: column;
 `;
 
 export const SmallVideo = styled.video`
     border: 1px solid white;
     border-radius: 4px;
     margin: 16px;
+    max-width: 80%;
+    min-width: 30%;
  `;
 
  export const MenuItemWrapper = styled.div`

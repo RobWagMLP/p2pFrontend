@@ -33,8 +33,8 @@ interface IState {
 
 class EntryComponent extends React.Component<IProps, IState> {
 
-        private devicEntryHeight = 22;
-        private deviceOverlayOffset= 100;
+        private devicEntryHeight = 44;
+        private deviceOverlayOffset= 140;
 
         p2pHandler: P2PHandler;
    
@@ -141,9 +141,9 @@ class EntryComponent extends React.Component<IProps, IState> {
                 }}>
                     {this.state.showDeviceMenu? <DeviceOverlay deviceList={this.state.devices} pos={this.state.devicePos}/> : null}
                     <HeaderBox>
-                        <img style={{maxWidth: '400px'}} src="/ecocare_health_logo.png" />
+                        <img style={{maxWidth: '240px', objectFit: 'scale-down'}}  src="/ecocare_health_logo.png" />
                     </HeaderBox>
-                    <HeaderBox style={{justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bodys.footer_background}}>
+                    <HeaderBox style={{justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bodys.footer_background, borderRadius: '4px'}}>
                         <MiddleHeading>
                             Ecocare Video Consultation
                         </MiddleHeading>
@@ -155,7 +155,7 @@ class EntryComponent extends React.Component<IProps, IState> {
                             </ErrBox>
                         :<ContentBox>
                             <VideoPreviewBox>
-                                <video style={{border: `2px solid ${theme.font.heading_color}`, borderRadius: '4px', maxWidth: '40%'}}
+                                <video style={{border: `2px solid ${theme.font.heading_color}`, borderRadius: '4px', width: '35%'}}
                                     autoPlay={true}
                                 />
                             </VideoPreviewBox>
@@ -175,6 +175,9 @@ class EntryComponent extends React.Component<IProps, IState> {
                             </div>
                             <SettingsBox>
                                 <HoverBox onClick={() => {
+                                    if(!this.state.mediaAvailable) {
+                                        return;
+                                    }
 
                                     const stream = this.state.stream;
                                     if(stream != null) {
@@ -184,10 +187,14 @@ class EntryComponent extends React.Component<IProps, IState> {
                                         audio: !this.state.audio && this.state.mediaAvailable,
                                         stream: stream
                                     })
-                                }}>
+                                }} key="audio">
                                       {this.state.audio ? audioOn() : audioOff()}
                                 </HoverBox>
                                 <HoverBox onClick={() => {
+                                     if(!this.state.mediaAvailable) {
+                                        return;
+                                    }
+
                                     const stream = this.state.stream;
                                     if(stream != null) {
                                         
@@ -197,7 +204,7 @@ class EntryComponent extends React.Component<IProps, IState> {
                                         cam: !this.state.cam && this.state.mediaAvailable,
                                         stream: stream
                                     })
-                                }}>
+                                }} key="video">
                                     {this.state.cam ? cameraOn() : cameraOff()}
                                 </HoverBox>
                                 <HoverBox id="settingsbox"
@@ -212,7 +219,7 @@ class EntryComponent extends React.Component<IProps, IState> {
                                                     y     : `${box.y - ( this.state.devices.length * this.devicEntryHeight  ) - this.deviceOverlayOffset}px`, 
                                                     height: `${(         this.state.devices.length * this.devicEntryHeight  ) + this.deviceOverlayOffset}px`}
                                     })
-                                }}>
+                                }} key="settings">
                                     {settings()}
                                 </HoverBox>
                             </SettingsBox>

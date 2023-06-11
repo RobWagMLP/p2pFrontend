@@ -2,6 +2,10 @@
 import { getIceServer } from "../Helper/util";
 import { Signaling } from "./signaling";
 import { Storage }from "../Helper/storage"
+import { IncomingRequestType } from "./enums";
+import { PEER_CHAT_MESSAGE, PEER_INFO_SHARE } from "./consts";
+
+const MaxRetryCount = 3;
 
 export class P2PHandler {
 
@@ -27,6 +31,12 @@ export class P2PHandler {
 
     private onNewConnection:                  (con: RTCPeerConnection, person_id: number) => void;
 
+    private onInfoReceived:                   (rawjson: string, person_id: number) => void;
+ 
+    private onFileReceived:                   (file: Blob, person_id: number) => void;
+
+    private onChatMessageReceived:            (message: string, person_id:number) => void;
+
     private statusHistory: Array<string>;
 
     private errorHistory:  Array<string>;
@@ -35,7 +45,9 @@ export class P2PHandler {
 
     private canEnterRoom:  boolean;
     
-    private negoiatation:  Map<number, {polite: boolean, sendingOffer: boolean}>;
+    private negoiatation:  Map<number, {polite: boolean, sendingOffer: boolean, retryCount: number}>;
+
+    private dataChannels:  Map<number, Map<string, RTCDataChannel>>;
 
     public  connections:   Map<number, RTCPeerConnection>;
 
@@ -43,12 +55,13 @@ export class P2PHandler {
 
     public constructor() {
         this.connections   = new Map<number, RTCPeerConnection>();
-        this.negoiatation  = new Map<number, {polite: boolean, sendingOffer: boolean}>;
+        this.negoiatation  = new Map<number, {polite: boolean, sendingOffer: boolean, retryCount: number}>;
         this.initialized   = false;
         this.canEnterRoom  = false;
         this.canReqestRoom = false;
         this.errorHistory  = [];
         this.statusHistory = [];
+        this.dataChannels  = new Map<number, Map<string, RTCDataChannel>>();
     }
 
     setErrorCallback(method:  (error: string ) => void) {
@@ -88,15 +101,32 @@ export class P2PHandler {
     setRoomReadycallback(method:  (suc: boolean, message?: string) => void) {
         this.roomReadyCallback = method;
     }
+
+    setInfoReceivedCallback(method: (rawjson: string, person_id: number) => void) {
+        this.onInfoReceived = method;
+    }
+
+    setFileReceivedCallback(method: (file: Blob, person_id: number) => void) {
+        this.onFileReceived = method;
+    }
+
+    setChatmessageReceivedCallback(method: (message: string, person_id: number) => void) {
+        this.onChatMessageReceived = method;
+    }
+
+    isPolite(person_id: number): boolean {
+        return this.negoiatation.get(person_id).polite;
+    }
     
     private async setupConnection(person_id: number) : Promise<RTCPeerConnection>{
-        const connection = await new RTCPeerConnection({iceServers: this.iceServer.splice(3, 2)});
+        this.iceServer.splice(3, 2);
+        const connection = await new RTCPeerConnection({iceServers: this.iceServer});
 
-        this.negoiatation.set(person_id, {polite: person_id > Storage.getInstance().getPersonID(), sendingOffer: false});
+        this.negoiatation.set(person_id, {polite: person_id > Storage.getInstance().getPersonID(), sendingOffer: false, retryCount: 0});
 
         connection.onicecandidate = (ev: RTCPeerConnectionIceEvent) => {
             if(ev.candidate) {
-                this.signaling.sendIceCandidate({type: "send_ice_candidate_to_peers", candidate: ev.candidate, person_id_receive: person_id});
+                this.signaling.sendIceCandidate({type: IncomingRequestType.SendIceCandidateToPeers, candidate: ev.candidate, person_id_receive: person_id});
             }
         }
 
@@ -111,9 +141,36 @@ export class P2PHandler {
             }
         };
 
-        connection.oniceconnectionstatechange = () => {
-            if(connection.connectionState === 'failed') {
-                connection.restartIce();
+        connection.oniceconnectionstatechange = (ev: Event) => {
+            console.log("connectionstate change", connection.iceConnectionState);
+
+            if(!this.negoiatation.has(person_id)) {
+                console.log("Person already cleaned up");
+                return;
+            }
+
+            if(connection.iceConnectionState === 'disconnected') {
+                if(this.negoiatation.get(person_id).retryCount >= MaxRetryCount) {
+                    console.log("retry counter exceeded, closing");
+                    this.closePeer(person_id);
+                }
+                else {
+                    const userNeg = this.negoiatation.get(person_id);
+                    
+                    userNeg.retryCount +=1;
+                    this.negoiatation.set(person_id, userNeg);
+
+                    connection.restartIce();
+                }
+            }
+            else if(connection.iceConnectionState === 'connected') {
+                const userNeg = this.negoiatation.get(person_id);
+                    
+                userNeg.retryCount = 0;
+                this.negoiatation.set(person_id, userNeg);
+            }
+            else if(connection.iceConnectionState === 'failed' || connection.iceConnectionState === 'closed') {
+                this.closePeer(person_id);
             }
         }
 
@@ -122,16 +179,45 @@ export class P2PHandler {
             this.onTrackReceived(person_id, ev);
         }
 
-        connection.addEventListener('connectionstatechange', (event: Event) => {
-            console.log(connection.connectionState, person_id);
-            if(connection.connectionState === "closed") {
-                this.connections.delete(person_id);
-                this.negoiatation.delete(person_id);
-            }
-            this.connectiontStateCallback(person_id, connection.connectionState);
-        });
+        connection.ondatachannel = (ev: RTCDataChannelEvent) => {
+            const channel = ev.channel;
+            const type    = channel.label;
+            console.log("receiving info");
+            switch(type) {
+                case PEER_INFO_SHARE: {
+                        channel.onmessage = (ev: MessageEvent) => {
+                            this.onInfoReceived(ev.data, person_id);
+                        }
+                    }
+                    break;
+                case PEER_CHAT_MESSAGE: {
+                        channel.onmessage = (ev: MessageEvent) => {
+                            this.onChatMessageReceived(ev.data, person_id);
+                        }
+                    }
+                    break;
+                default: {
+                        const split = type.split("::");
+                        if(split[0] !== 'file_share') {
+                            return;
+                        }
+                        channel.binaryType = 'arraybuffer';
+                        const filename = split[1];
+                    }
+            };
+            const chnlmap = this.dataChannels.has(person_id) ? this.dataChannels.get(person_id) : new Map<string, RTCDataChannel>();
+            chnlmap.set(type, channel);
+
+            this.dataChannels.set(person_id, chnlmap);
+        }
 
         return Promise.resolve(connection);
+    }
+
+    closePeer(person_id) {
+        this.connections.delete(person_id);
+        this.negoiatation.delete(person_id);
+        this.connectiontStateCallback(person_id, 'closed');
     }
 
     ignoreRequest(person_id: number): boolean {
@@ -252,7 +338,7 @@ export class P2PHandler {
                 if(!knownConnection) {
                     this.onNewConnection(connection, person_id);
                 }
-                this.signaling.sendAnswer({type: "accept_offer_from_peer", answer: connection.localDescription});
+                this.signaling.sendAnswer({type: IncomingRequestType.AcceptOfferFromPeers, answer: connection.localDescription, person_id: person_id});
 
             });
 
@@ -268,6 +354,10 @@ export class P2PHandler {
                     break;
                     default: this.onOrder(order);
                 }
+            });
+
+            this.signaling.addPeerClosedListener((person_id_close: number) => {
+                this.closePeer(person_id_close);
             })
 
             this.signaling.connect(person_id);
@@ -280,7 +370,7 @@ export class P2PHandler {
         if(!this.canReqestRoom) {
             throw new Error('Socket not ready');
         }
-        this.signaling.sendRoomRequest({type: "request_room", room_id: room_id});
+        this.signaling.sendRoomRequest({type: IncomingRequestType.RequestRoom, room_id: room_id});
     }
 
     async sendSingleOffer(person_id: number) {
@@ -294,7 +384,7 @@ export class P2PHandler {
 
             await connection.setLocalDescription();
 
-            this.signaling.sendSingleOffer({type: "send_offer_to_single_peers", offer: connection.localDescription, person_id_receive: person_id});
+            this.signaling.sendSingleOffer({type: IncomingRequestType.SendOfferToSinglePeer, offer: connection.localDescription, person_id_receive: person_id});
         }
     }
 
@@ -312,11 +402,86 @@ export class P2PHandler {
                     offer = o[1].localDescription
                 }
             }
-            this.signaling.sendOffer({type: "send_offer_to_peers", offer: offer});
+            this.signaling.sendOffer({type: IncomingRequestType.SendOfferToPeers, offer: offer});
         }
     }
 
     sendMessage(message: string) {
-        this.signaling.sendMessage({type: "message", message: message});
+        this.signaling.sendMessage({type: IncomingRequestType.Message, message: message});
+    }
+
+    getOrCreateDataChannel(type: string, person_id: number): RTCDataChannel {
+        let dataChannel: RTCDataChannel;
+        if(this.dataChannels.has(person_id) && this.dataChannels.get(person_id).has(type) ) {
+            dataChannel = this.dataChannels.get(person_id).get(type);
+        } else {
+            dataChannel = this.connections.get(person_id).createDataChannel(type);
+            
+        }
+        return dataChannel;
+    }
+
+    sendInfo(info: string, person_id: number) {
+        console.log("sending info");
+
+        let dataChannel: RTCDataChannel = this.getOrCreateDataChannel(PEER_INFO_SHARE,person_id);
+        
+        if(dataChannel.readyState === 'open') {
+            dataChannel.send(info);
+            return;
+        }
+
+        const chnlmap = this.dataChannels.has(person_id) ? this.dataChannels.get(person_id) : new Map<string, RTCDataChannel>();
+
+        dataChannel.onopen = (ev: Event) => {
+            dataChannel.send(info);
+        }
+
+        dataChannel.onmessage = (ev: MessageEvent) => {
+            this.onInfoReceived(ev.data, person_id);
+        }
+
+        chnlmap.set(PEER_INFO_SHARE, dataChannel);
+        this.dataChannels.set(person_id, chnlmap);
+    }
+
+    setupChatChannel(person_id: number) {
+        let dataChannel: RTCDataChannel = this.getOrCreateDataChannel(PEER_CHAT_MESSAGE, person_id);
+
+        const chnlmap = this.dataChannels.has(person_id) ? this.dataChannels.get(person_id) : new Map<string, RTCDataChannel>();
+
+        dataChannel.onopen = (ev: Event) => {
+            console.log("Chat channel ready")
+        }
+
+        dataChannel.onmessage = (ev: MessageEvent) => {
+            this.onChatMessageReceived(ev.data, person_id);
+        }
+
+        chnlmap.set(PEER_CHAT_MESSAGE, dataChannel);
+        this.dataChannels.set(person_id, chnlmap);
+    }
+
+    broadCastChatMessage(message: string) {
+        for(const channels of this.dataChannels) {
+            if(channels[1].has(PEER_CHAT_MESSAGE) && channels[1].get(PEER_CHAT_MESSAGE).readyState === 'open') {
+                channels[1].get(PEER_CHAT_MESSAGE).send(message);
+            }
+        }
+    }
+
+    closeDataChannel(person_id: number, type: string) {
+        if(this.dataChannels.has(person_id)) {
+            const channel = this.dataChannels.get(person_id).get(type);
+            if(channel) {
+                channel.close();
+                this.dataChannels.get(person_id).delete(type);
+            }
+        }
+    }
+
+    disconnectFromPeers() {
+        this.signaling.sendPeerClose({type: IncomingRequestType.PeerClosed});
+        this.signaling.disconnect();
     }
 }

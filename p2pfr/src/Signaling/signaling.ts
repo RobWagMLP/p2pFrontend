@@ -1,4 +1,5 @@
-import {Offer, Answer, RecIceCandidate, RequestRoom, SingleOffer, RawMessage} from './interfaces.ts'
+import { IncomingRequestType, OutgoingRequestType } from './enums.ts';
+import {Offer, Answer, RecIceCandidate, RequestRoom, SingleOffer, RawMessage, ClosePeer} from './interfaces.ts'
 
 export class Signaling {
 
@@ -11,7 +12,8 @@ export class Signaling {
     onOpen          : (                                                ) => void;
     onClose         : (reason:string                                   ) => void;
     onError         : (error:string                                    ) => void;
-    onWebSocketError : (ev: Event                                       ) => void;
+    onWebSocketError: (ev: Event                                       ) => void;
+    onPeerClosed    : (person_id_close: number                         ) => void;
     
     private ws: WebSocket;
 
@@ -48,32 +50,36 @@ export class Signaling {
                 const dataobj = JSON.parse(data);
 
                 switch(dataobj.type) {
-                    case "status": {
+                    case OutgoingRequestType.Status: {
                         this.onStatus(dataobj.status)
                     }
                     break;
-                    case "offer": {
+                    case OutgoingRequestType.Offer: {
                         this.onOffer(dataobj.offer, dataobj.person_id);
                     }
                     break;
-                    case "answer": {
+                    case OutgoingRequestType.Answer: {
                         this.onAnswer(dataobj.answer, dataobj.person_id);
                     }
                     break;
-                    case "ice_candidate": {
+                    case OutgoingRequestType.IceCandidate: {
                         this.onRecIceCand(dataobj.candidate, dataobj.person_id);
                     }
                     break;
-                    case "order": {
+                    case OutgoingRequestType.Order: {
                         this.onOrder(dataobj.order);
                     }
                     break;
-                    case "error": {
+                    case OutgoingRequestType.Error: {
                         this.onError(dataobj.error);
                     }
                     break;
-                    case "room_info": {
+                    case OutgoingRequestType.RoomInfo: {
                         this.onRoomInfo(dataobj.userlist);
+                    }
+                    break;
+                    case OutgoingRequestType.ClosePeer: {
+                        this.onPeerClosed(dataobj.person_id_close);
                     }
                     break;
                     default: {
@@ -126,6 +132,10 @@ export class Signaling {
         this.onWebSocketError = method;
     }
 
+    addPeerClosedListener(method: (person_id_close: number   ) => void) {
+        this.onPeerClosed = method;
+    }
+
 
     sendRoomRequest(roomRequest: RequestRoom) {
         if(this.ws.readyState === 1) {
@@ -163,4 +173,11 @@ export class Signaling {
             this.ws.send(JSON.stringify(message));
         }
     }
+
+    sendPeerClose(closePeer: ClosePeer) {
+        if(this.ws.readyState === 1) {
+            this.ws.send(JSON.stringify(closePeer));
+        }
+    }
+
 }

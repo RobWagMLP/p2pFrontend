@@ -1,5 +1,7 @@
+import { IncomingRequestType } from "./enums";
+
 export interface SocketMessage {
-    type: string;
+    type: IncomingRequestType;
 }
 
 export interface RequestRoom extends SocketMessage {
@@ -17,6 +19,7 @@ export interface Offer extends SocketMessage {
 
 export interface Answer extends SocketMessage {
     answer: RTCSessionDescriptionInit;
+    person_id: number;
 }
 
 export interface RecIceCandidate extends SocketMessage {
@@ -26,4 +29,13 @@ export interface RecIceCandidate extends SocketMessage {
 
 export interface RawMessage extends SocketMessage {
     message: string
+}
+
+export interface ClosePeer extends SocketMessage {
+  
+}
+
+export interface ChatMessage {
+    name: string;
+    message: string;
 }

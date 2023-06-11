@@ -12,7 +12,7 @@ export const theme = {
         display: 'grid'
     },
     margins: {
-        global_margin: '32px',
+        global_margin: '16px',
         base_margin: '16px',
         space_margin: '8px'
     },

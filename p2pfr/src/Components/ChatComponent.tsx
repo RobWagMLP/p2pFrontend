@@ -1,11 +1,11 @@
 import React, { PureComponent, ReactElement, SyntheticEvent } from "react";
 import {  StyledTextField,  ChatWrapper, FileBox, MessageBox, Message, Name, Text, StyledLink } from "../Style/baseStyle.css";
 import { ChatMessage } from "../Signaling/interfaces";
+import { ChatMessageTypeEnum } from "../Signaling/enums";
 
 
 interface IProps {
     messages: Array<ChatMessage>;
-    files   : Map<string, Blob>;
     onNewMessage: (message: string) => void;
 }
 
@@ -55,21 +55,12 @@ export class ChatComponent extends PureComponent<IProps> {
                         {o.name}:
                     </Name>
                     <Text>
-                        {o.message}
+                        {o.type === ChatMessageTypeEnum.Message ? o.message
+                                                                : <StyledLink download={o.message} href={URL.createObjectURL(o.blob)}>
+                                                                    {o.message}
+                                                                </StyledLink>}
                     </Text>
                 </Message>
-            )
-        }
-        return out;
-    }
-
-    setUpFiles() : Array<ReactElement> {
-        const out = [];
-        for(const o of this.props.files) {
-            out.push(
-                <StyledLink download={o[0]} href={URL.createObjectURL(o[1])}>
-                    {o[0]}
-                </StyledLink>
             )
         }
         return out;
@@ -78,9 +69,6 @@ export class ChatComponent extends PureComponent<IProps> {
     render()  {
         return(
             <ChatWrapper>
-                <FileBox>
-                    {this.setUpFiles()}
-                </FileBox>
                 <MessageBox>
                     {this.getMessageBoxContent()}
                 </MessageBox>

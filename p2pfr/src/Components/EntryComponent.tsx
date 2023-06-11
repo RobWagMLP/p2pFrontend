@@ -1,5 +1,5 @@
 import React, { SyntheticEvent } from "react";
-import { MainBox, HeaderBox, MiddleHeading, ContentBox, ErrBox, SmallHeading, SettingsBox, HoverBox, VideoPreviewBox } from "../Style/baseStyle.css";
+import { MainBox, HeaderBox, MiddleHeading, ContentBox, ErrBox, SmallHeading, SettingsBox, HoverBox, VideoPreviewBox, Footer } from "../Style/baseStyle.css";
 import { theme } from "../Style/theme";
 import { Input } from "../Elements/input";
 import { Storage } from "../Helper/storage";
@@ -229,6 +229,7 @@ class EntryComponent extends React.Component<IProps, IState> {
                             </ErrBox>
                         </ContentBox>
                          }
+                        <Footer />
                 </MainBox>
             )
         }

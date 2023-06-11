@@ -19,3 +19,8 @@ export enum OutgoingRequestType {
     Message      = 8,
     ClosePeer    = 9,
 }
+
+export enum ChatMessageTypeEnum {
+    Message,
+    Blob
+}

@@ -1,4 +1,4 @@
-import { IncomingRequestType } from "./enums";
+import { ChatMessageTypeEnum, IncomingRequestType } from "./enums";
 
 export interface SocketMessage {
     type: IncomingRequestType;
@@ -36,6 +36,8 @@ export interface ClosePeer extends SocketMessage {
 }
 
 export interface ChatMessage {
+    type: ChatMessageTypeEnum,
+    blob?: Blob,
     name: string;
-    message: string;
+    message?: string;
 }

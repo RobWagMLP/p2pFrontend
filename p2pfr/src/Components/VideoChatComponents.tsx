@@ -5,8 +5,8 @@ import { Storage } from "../Helper/storage";
 import { audioOn, audioOff, cameraOn, cameraOff, settings, shareScreen, uploadFile, chat, stop, stopShareScreen } from "../Helper/icons";
 import { PEER_CHAT_MESSAGE } from "../Signaling/consts";
 import { ChatComponent } from "./ChatComponent";
-import { hostname } from "os";
 import { ChatMessage } from "../Signaling/interfaces";
+import { ChatMessageTypeEnum } from "../Signaling/enums";
 
 interface PeerData {
     name?: string;
@@ -38,7 +38,6 @@ interface IState {
     screenMedia?: MediaStream;
 
     chatHistory: Array<ChatMessage>;
-    files: Map<string, Blob>;
 
     showChat?: boolean;
 }
@@ -67,7 +66,6 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             screenShared: false,
             senders: new Map<number, Array<RTCRtpSender>>(),
             chatHistory: [],
-            files: new Map<string, Blob>(),
             showChat: true
 
         }
@@ -281,13 +279,25 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         this.p2pHandler.setChatmessageReceivedCallback((message: string, person_id: number) => {
             const hist = this.state.chatHistory;
             const usr = this.state.streams.get(person_id) ? this.state.streams.get(person_id).name : "Unkown";
-            hist.push({name: usr, message: message});
+            hist.push({name: usr, message: message,type: ChatMessageTypeEnum.Message});
 
             this.setState({
                 chatHistory: hist
             })
             
         });
+
+        this.p2pHandler.setFileReceivedCallback((name: string, file: Blob, person_id: number) => {
+            const hist = this.state.chatHistory;
+            const userName = this.state.streams.has(person_id) ? this.state.streams.get(person_id).name : "";
+
+            hist.push({name: userName, message: name, type: ChatMessageTypeEnum.Blob, blob: file});
+
+            this.setState({
+                chatHistory: hist
+            })
+
+        })
 
         if(!this.p2pHandler.initialized) {
             this.p2pHandler.init(Storage.getInstance().getPersonID());
@@ -347,7 +357,10 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         if(!streams || !streams.has(person_id)) {
             return;
         }
-        streams.get(person_id).audio = audio;
+
+        const data = streams.get(person_id);
+        data.audio = audio;
+        streams.set(person_id, data);
 
         this.setState({
             streams: streams
@@ -359,7 +372,9 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         if(!streams || !streams.has(person_id)) {
             return;
         }
-        streams.get(person_id).video = video;
+        const data = streams.get(person_id);
+        data.video = video;
+        streams.set(person_id, data);
 
         this.setState({
             streams: streams
@@ -427,7 +442,9 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         for(const person_id of this.state.mainVideoArea) {
 
             const stream = this.state.streams.get(person_id);
-
+            if(stream != null) {
+                console.log(stream.audio);
+            }
             out.push(
                 <VideoWrapper
                     width={participans > 1 ? '35vw' : '90%'}>
@@ -533,6 +550,23 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         return out;
     }
 
+    async selectFile() {
+        const fileSelect = document.createElement('input');
+        fileSelect.type = 'file';
+        fileSelect.onchange = (ev: Event) => {
+            const files = Array.from(fileSelect.files);
+            const file :File = files[0];
+
+            this.p2pHandler.sendFile(file);
+            const hist = this.state.chatHistory;
+            hist.push({name: this.state.username, message: file.name, blob: file, type: ChatMessageTypeEnum.Blob});
+            this.setState({
+                chatHistory: hist
+            })
+        }
+        fileSelect.click();
+    }
+
     setSelfVideoTrack(stream: MediaStream) {
         const videoSelf     = document.getElementById('video_stream_self') as HTMLVideoElement;
 
@@ -595,12 +629,11 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     </OffsetVideoArea>
                     {this.state.showChat ? 
                         <ChatComponent 
-                            files={this.state.files}
                             messages={this.state.chatHistory}
                             onNewMessage={(message: string) => {
                                 const hist = this.state.chatHistory;
 
-                                hist.push({name: this.state.username, message: message});
+                                hist.push({name: this.state.username, message: message, type: ChatMessageTypeEnum.Message});
 
                                 this.p2pHandler.broadCastChatMessage(message);
 
@@ -637,6 +670,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                         </HoverBox>
                         <HoverBox onClick={(event: SyntheticEvent) => {
                             event.stopPropagation();
+                            this.selectFile();
                             }}>
                             {uploadFile()}
                         </HoverBox>

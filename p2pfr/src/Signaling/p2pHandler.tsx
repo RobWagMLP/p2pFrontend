@@ -3,7 +3,9 @@ import { getIceServer } from "../Helper/util";
 import { Signaling } from "./signaling";
 import { Storage }from "../Helper/storage"
 import { IncomingRequestType } from "./enums";
-import { PEER_CHAT_MESSAGE, PEER_INFO_SHARE } from "./consts";
+import { END_IF_FILE_MSG, MAX_BYTE_PER_TRANSFER, PEER_CHAT_MESSAGE, PEER_INFO_SHARE } from "./consts";
+import { arrayBuffer } from "stream/consumers";
+import { FileBuilder } from "../Helper/filebuilder";
 
 const MaxRetryCount = 3;
 
@@ -33,7 +35,7 @@ export class P2PHandler {
 
     private onInfoReceived:                   (rawjson: string, person_id: number) => void;
  
-    private onFileReceived:                   (file: Blob, person_id: number) => void;
+    private onFileReceived:                   (name: string, file: Blob, person_id: number) => void;
 
     private onChatMessageReceived:            (message: string, person_id:number) => void;
 
@@ -49,6 +51,8 @@ export class P2PHandler {
 
     private dataChannels:  Map<number, Map<string, RTCDataChannel>>;
 
+    private filebuilder:   FileBuilder;
+
     public  connections:   Map<number, RTCPeerConnection>;
 
     public  initialized:   boolean;
@@ -62,6 +66,7 @@ export class P2PHandler {
         this.errorHistory  = [];
         this.statusHistory = [];
         this.dataChannels  = new Map<number, Map<string, RTCDataChannel>>();
+        this.filebuilder   = new FileBuilder();
     }
 
     setErrorCallback(method:  (error: string ) => void) {
@@ -106,7 +111,7 @@ export class P2PHandler {
         this.onInfoReceived = method;
     }
 
-    setFileReceivedCallback(method: (file: Blob, person_id: number) => void) {
+    setFileReceivedCallback(method: (name: string, file: Blob, person_id: number) => void) {
         this.onFileReceived = method;
     }
 
@@ -203,6 +208,13 @@ export class P2PHandler {
                         }
                         channel.binaryType = 'arraybuffer';
                         const filename = split[1];
+                        channel.onmessage = (ev: MessageEvent) => {
+                            if(this.filebuilder.assembleFile(filename, ev.data)) {
+                                const file = this.filebuilder.buildFile(filename);
+                                this.onFileReceived(filename, file, person_id)
+                            }
+                        }
+                        
                     }
             };
             const chnlmap = this.dataChannels.has(person_id) ? this.dataChannels.get(person_id) : new Map<string, RTCDataChannel>();
@@ -483,5 +495,20 @@ export class P2PHandler {
     disconnectFromPeers() {
         this.signaling.sendPeerClose({type: IncomingRequestType.PeerClosed});
         this.signaling.disconnect();
+    }
+
+    async sendFile(file: File) {
+        const arrBuffer = await file.arrayBuffer();
+        for(const o of this.connections) {
+            let dataChannel: RTCDataChannel = this.getOrCreateDataChannel(`file_share::${file.name}`, o[0]);
+            dataChannel.binaryType = 'arraybuffer';
+
+            dataChannel.onopen = (ev: Event) => {
+                for(let i = 0; i < arrBuffer.byteLength; i += MAX_BYTE_PER_TRANSFER) {
+                    dataChannel.send(arrBuffer.slice(i, i + MAX_BYTE_PER_TRANSFER));
+                }
+                dataChannel.send(END_IF_FILE_MSG);
+            }   
+        }
     }
 }

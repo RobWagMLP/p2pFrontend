@@ -10,7 +10,6 @@ function App() {
       <Window>
         <RouteComponent />
       </Window>
-      <Footer />
     </div>
   );
 }

@@ -26,14 +26,13 @@ interface IState {
     mediaAvailable?: boolean;
     socketAvailable?: boolean;
     showDeviceMenu?: boolean;
-    devicePos?: {x: string; y: string; height: string};
     error?: string;
     canStart: boolean;
 }
 
 class EntryComponent extends React.Component<IProps, IState> {
 
-        private devicEntryHeight = 44;
+        private devicEntryHeight = 30;
         private deviceOverlayOffset= 140;
 
         p2pHandler: P2PHandler;
@@ -131,15 +130,47 @@ class EntryComponent extends React.Component<IProps, IState> {
             }
         }
 
+        onDeviceSelect(device: {[key: string]: any}) {
+            if(this.state.stream == null) { 
+                return;
+            }
+            const stream = this.state.stream;
+
+            device.array.forEach((element: any, key: string)=> {
+                if(key === "video") {
+                    const con = stream.getVideoTracks()[0].getConstraints();
+                    con["video"].deviceId = element.deviceId;
+                    stream.getVideoTracks()[0].applyConstraints(con);
+
+                } else if(key === "audio" ){
+                    const con = stream.getAudioTracks()[0].getConstraints();
+                    con["audio"].deviceId = element.deviceId;
+                    stream.getVideoTracks()[0].applyConstraints(con);
+
+                } else {
+                    //@ts-ignore
+                    if(navigator.mediaDevices.selectAudioOutput) {
+                        //@ts-ignore
+                        navigator.mediaDevices.selectAudioOutput({deviceId: element.deviceId})
+                    } else {
+                        console.log("no audio api available")
+                    }
+                }
+            });
+        }
+
         render() {
             if(this.state.canStart) {
-                return <VideoChatComponent />
+                return <VideoChatComponent onDoneCallback={() => {this.setState({
+                    canStart: false
+                })}}/>
             }
+            
             return(
                 <MainBox onClick={() => {
                     this.setState({showDeviceMenu: false})
                 }}>
-                    {this.state.showDeviceMenu? <DeviceOverlay deviceList={this.state.devices} pos={this.state.devicePos}/> : null}
+                    {this.state.showDeviceMenu? <DeviceOverlay onDeviceSelect={(device: {[key: string]: any}) => {this.onDeviceSelect(device)} } deviceList={this.state.devices} /> : null}
                     <HeaderBox>
                         <img style={{maxWidth: '240px', objectFit: 'scale-down'}}  src="/ecocare_health_logo.png" />
                     </HeaderBox>
@@ -215,9 +246,6 @@ class EntryComponent extends React.Component<IProps, IState> {
 
                                     this.setState({
                                         showDeviceMenu: true,
-                                        devicePos: {x     : `${box.x}px`, 
-                                                    y     : `${box.y - ( this.state.devices.length * this.devicEntryHeight  ) - this.deviceOverlayOffset}px`, 
-                                                    height: `${(         this.state.devices.length * this.devicEntryHeight  ) + this.deviceOverlayOffset}px`}
                                     })
                                 }} key="settings">
                                     {settings()}

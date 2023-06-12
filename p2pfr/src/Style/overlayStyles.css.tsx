@@ -1,17 +1,17 @@
 import styled from "styled-components";
 import {theme} from './theme';
 
-export const PlaceableOverlay = styled.div<{x: string, y: string, height?: string}>`
+export const CenteredOverlay = styled.div`
     position: absolute;
     z-index: 10000;
     width:  400px;
-    height: ${props => props.height != null ? props.height : "300px"};;
     background-color: ${theme.font.base_color};;
-    left: ${props => props.x};
-    top: ${props => props.y};
+    left: 0;
+    right: 0;
     border: 2px solid ${theme.font.heading_color};
     border-radius: 4px;
     color: white;
+    margin: auto;
 `;
 
 export const InnerOverlay = styled.div`
@@ -30,6 +30,9 @@ export const DeviceEntry = styled.div`
     display: flex;
     text-align: left;
     justify-content: flex-start;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
     :hover {
         font-weight: 500;
         cursor: pointer;

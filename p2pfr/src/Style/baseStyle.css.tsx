@@ -187,6 +187,7 @@ export const ErrBox = styled.div`
 export const Footer = styled.div`
     height: 100px;
     margin-left: -32px;
+    margin-bottom: -32px;
     margin-right: -32px;
     background-color: ${theme.font.base_color};
 `;

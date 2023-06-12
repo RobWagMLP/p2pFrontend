@@ -494,7 +494,6 @@ export class P2PHandler {
 
     disconnectFromPeers() {
         this.signaling.sendPeerClose({type: IncomingRequestType.PeerClosed});
-        this.signaling.disconnect();
     }
 
     async sendFile(file: File) {

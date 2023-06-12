@@ -1,11 +1,11 @@
 import React, { FunctionComponent, ReactElement } from "react";
-import { DeviceEntry, InnerOverlay, PlaceableOverlay } from "../Style/overlayStyles.css";
+import { DeviceEntry, InnerOverlay, CenteredOverlay } from "../Style/overlayStyles.css";
 import { StyledLine } from "../Style/baseStyle.css";
 
 
 interface IProps {
-    deviceList: Array<MediaDeviceInfo>
-    pos: {x: string, y:string, height: string}
+    deviceList: Array<MediaDeviceInfo>;
+    onDeviceSelect(devices: {[key: string] : any})
 }
 
 export const DeviceOverlay: FunctionComponent< IProps> = (props: IProps) => { 
@@ -15,19 +15,27 @@ export const DeviceOverlay: FunctionComponent< IProps> = (props: IProps) => {
             for(const o of props.deviceList) {
                 if(o.kind === type) {
                     
-                    out.push(<DeviceEntry> {`${o.label}`}</DeviceEntry>)
+                    out.push(<DeviceEntry
+                                onClick={() => {
+                                    const out = {};
+                                    const deviceType = type === "videoinput" ? "video" : type === "audioinput" ? "audio" : "audioout";
+
+                                    out[deviceType] = {deviceId: o.deviceId};
+                                    this.onDeviceSelect(out);
+
+                                }}> {`${o.label}`}</DeviceEntry>)
                 }
             }
             return out;
         }
         console.log(props.deviceList);
         return(
-            <PlaceableOverlay 
+            <CenteredOverlay 
                 onClick={(ev: React.SyntheticEvent) => {
                     ev.stopPropagation();
                     ev.preventDefault();
                 }}
-                x={props.pos.x} y={props.pos.y} height={props.pos.height}>
+                >
                 <InnerOverlay> 
                     <StyledLine />
                     <div style={{marginBottom: '4px', fontWeight: 550}}> Audio In:</div> 
@@ -47,7 +55,7 @@ export const DeviceOverlay: FunctionComponent< IProps> = (props: IProps) => {
                     <StyledLine />
                 </InnerOverlay>
 
-            </PlaceableOverlay>
+            </CenteredOverlay>
         );
     
 }

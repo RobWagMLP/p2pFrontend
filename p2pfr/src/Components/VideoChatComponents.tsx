@@ -18,7 +18,7 @@ interface PeerData {
 }
 
 interface IProps {
-
+    onDoneCallback: () => void;
 }
 
 interface IState {
@@ -129,29 +129,25 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             const streams = this.state.streams;
             const trackType = ev.track.kind;
 
-            console.log(`${trackType} track received from ${person_id}`)
-
-            ev.track.addEventListener("mute", (ev: Event) => {
+            ev.track.onmute = (ev: Event) => {
                 if(trackType === 'audio') {
                     this.onMutePeerAudio(false, person_id);
                 } else {
                     this.onMutePeerVideo(false, person_id)
                 }
-            })
-
-            ev.track.addEventListener("unmute", (ev: Event) => {
+            }
+            
+            ev.track.onunmute = (ev: Event) => {
                 if(trackType === 'audio') {
                     this.onMutePeerAudio(true, person_id);
                 } else {
                     this.onMutePeerVideo(true, person_id)
                 }
-            })
+            }
          
             let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
 
             data.stream = ev.streams[0];
-
-            console.log(`Amount of Tracks in Stream: ${data.stream.getTracks().length}`);
 
             if(trackType === 'audio') {
                 data.audio = ev.track.enabled;
@@ -177,7 +173,6 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         })
 
         this.p2pHandler.setConnectionStatecallback((person_id: number, state: string) => {
-            console.log(`state ${state} with ${person_id}.`);  
 
             if(state === "closed") {
 
@@ -352,7 +347,6 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
     }
 
     onMutePeerAudio(audio: boolean, person_id: number) {
-
         const streams = this.state.streams;
         if(!streams || !streams.has(person_id)) {
             return;
@@ -361,7 +355,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const data = streams.get(person_id);
         data.audio = audio;
         streams.set(person_id, data);
-
+        
         this.setState({
             streams: streams
         })
@@ -393,6 +387,12 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const stream = this.state.deviceAndStream.stream;
 
         stream.getAudioTracks()[0].enabled = audio;
+
+        for(const o of this.state.connections) {
+            const transc = o[1].getTransceivers();
+            const mode = audio ? 'sendrecv' : 'recvonly';
+            transc[0].direction = mode;
+        }
 
         this.setState({
             mediaEnabled: {cam: this.state.mediaEnabled.cam, audio: audio}
@@ -442,9 +442,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         for(const person_id of this.state.mainVideoArea) {
 
             const stream = this.state.streams.get(person_id);
-            if(stream != null) {
-                console.log(stream.audio);
-            }
+          
             out.push(
                 <VideoWrapper
                     width={participans > 1 ? '35vw' : '90%'}>
@@ -688,6 +686,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                         <HoverBox onClick={(event: SyntheticEvent) => {
                             event.stopPropagation();
                             this.close();
+                            this.props.onDoneCallback();
                             }}>
                             {stop()}
                         </HoverBox>

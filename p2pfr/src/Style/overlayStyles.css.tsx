@@ -4,7 +4,7 @@ import {theme} from './theme';
 export const CenteredOverlay = styled.div`
     position: absolute;
     z-index: 10000;
-    width:  400px;
+    width:  500px;
     background-color: ${theme.font.base_color};;
     left: 0;
     right: 0;
@@ -29,6 +29,7 @@ export const DeviceEntry = styled.div`
     margin-left: 32px;
     display: flex;
     text-align: left;
+    display: block;
     justify-content: flex-start;
     text-overflow: ellipsis;
     overflow: hidden;

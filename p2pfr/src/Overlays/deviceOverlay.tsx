@@ -16,6 +16,7 @@ export const DeviceOverlay: FunctionComponent< IProps> = (props: IProps) => {
                 if(o.kind === type) {
                     
                     out.push(<DeviceEntry
+                                title={o.label}
                                 onClick={() => {
                                     const out = {};
                                     const deviceType = type === "videoinput" ? "video" : type === "audioinput" ? "audio" : "audioout";

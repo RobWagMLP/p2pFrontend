@@ -494,6 +494,20 @@ export class P2PHandler {
 
     disconnectFromPeers() {
         this.signaling.sendPeerClose({type: IncomingRequestType.PeerClosed});
+        this.signaling.disconnect();
+        
+    }
+
+    reset() {
+        for(const o of this.negoiatation) {
+            this.negoiatation.delete(o[0]);
+        }
+        for(const o of this.connections) {
+            this.connections.delete(o[0]);
+        }
+        for(const o of this.dataChannels) {
+            this.dataChannels.delete[o[0]];
+        }
     }
 
     async sendFile(file: File) {

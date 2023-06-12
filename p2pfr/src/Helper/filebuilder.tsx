@@ -41,7 +41,10 @@ export class FileBuilder {
                 tmp.set(new Uint8Array(next), prev.byteLength);
                 return tmp;
             }, new Uint8Array());
+            
             const blob = new Blob([arrayBuffer]);
+            this.files.delete(name);
+
             return blob;
         }
     }

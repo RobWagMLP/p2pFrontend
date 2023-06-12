@@ -53,6 +53,10 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const deviceAndStream   = Storage.getInstance().getMediaDeviceAndStream();
         const username          = Storage.getInstance().getUserName();
 
+        if(deviceAndStream.stream.getVideoTracks() == null || deviceAndStream.stream.getVideoTracks().length === 0) {
+            deviceAndStream.stream = this.createDummyTrack(deviceAndStream.stream);
+        }
+
         this.state = {
             username: username,
             mediaEnabled: mediaEnabled,
@@ -95,6 +99,24 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
     componentWillUnmount(): void {
        this.close();
+    }
+
+    createDummyTrack(stream: MediaStream) {
+        let canvas = document.createElement("canvas");
+    
+        canvas.getContext('2d').fillRect(0, 0, 640, 480);
+    
+        let dummystream = canvas.captureStream();
+        
+        let dummyVideo  = dummystream.getVideoTracks()[0];
+
+        dummyVideo.enabled = false;
+        
+        stream.getVideoTracks().push(dummyVideo as MediaStreamTrack);
+
+        const newStream = new MediaStream([stream.getAudioTracks()[0], dummyVideo]);
+        
+        return newStream;
     }
 
     initP2P() {
@@ -378,9 +400,10 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
     close() {
         this.p2pHandler.disconnectFromPeers();
 
-        for(const o of this.state.connections) {
-            o[1].close();
+        for(const o of this.state.streams) {
+            this.state.streams.delete[o[0]];
         }
+        this.p2pHandler.reset();
     }
 
     onMuteAudio(audio: boolean) {
@@ -574,7 +597,6 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const videoStream = new MediaStream();
 
         videoStream.addTrack(stream.getVideoTracks()[0]);
-
         videoSelf.srcObject = videoStream;
 
     }

@@ -98,7 +98,7 @@ class EntryComponent extends React.Component<IProps, IState> {
         }
 
 
-        async handleMedia(constraints = {audio: true, video: true}) {
+        async handleMedia(constraints = {audio: true, video: false}) {
             
             if(!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia) {
                 this.setState( {
@@ -108,6 +108,12 @@ class EntryComponent extends React.Component<IProps, IState> {
                 return;
             }
             try{
+                const devicesPre: MediaDeviceInfo[] = await navigator.mediaDevices.enumerateDevices();
+                for (const o of devicesPre) {
+                    if(o.kind === 'videoinput') {
+                        constraints.video = true;
+                    }
+                }
                 const stream: MediaStream = await navigator.mediaDevices.getUserMedia(constraints);
                 const devices: MediaDeviceInfo[] = await navigator.mediaDevices.enumerateDevices();
                 
@@ -122,7 +128,7 @@ class EntryComponent extends React.Component<IProps, IState> {
                     video.srcObject = this.state.stream;
                 })
             } catch(err: any) {
-                console.log(err);
+                if(err)
                 this.setState({
                     mediaAvailable: false,
                     error: "No Media Permission received"
@@ -161,9 +167,12 @@ class EntryComponent extends React.Component<IProps, IState> {
 
         render() {
             if(this.state.canStart) {
-                return <VideoChatComponent onDoneCallback={() => {this.setState({
-                    canStart: false
-                })}}/>
+                return <VideoChatComponent onDoneCallback={() => {
+                    this.setState({
+                        canStart: false
+                        })
+                    }
+                }/>
             }
             
             return(
